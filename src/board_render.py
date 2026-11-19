@@ -1122,18 +1122,35 @@ BOARD_JS = """
     });
   });
   var POLL_MS = 30000;
+  var SCROLL_KEY = 'board.scrollY';
+  function reloadKeepingPlace() {
+    // location.reload() keeps the URL, so the tab hash and any open
+    // detail survive, but the scroll position does not: save it and
+    // restore it after the reload.
+    try { sessionStorage.setItem(SCROLL_KEY, String(window.scrollY)); } catch (e) {}
+    location.reload();
+  }
+  function restoreScroll() {
+    try {
+      var y = sessionStorage.getItem(SCROLL_KEY);
+      if (y !== null) {
+        sessionStorage.removeItem(SCROLL_KEY);
+        window.scrollTo(0, parseInt(y, 10) || 0);
+      }
+    } catch (e) {}
+  }
   function poll() {
     fetch('/feed.json', { cache: 'no-store' }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     }).then(function (data) {
       var seen = document.body.getAttribute('data-generated') || '';
-      if (data.generated_at && data.generated_at !== seen) location.reload();
+      if (data.generated_at && data.generated_at !== seen) reloadKeepingPlace();
     }).catch(function () { /* keep showing the last good data; the banner covers it */ });
   }
   setInterval(poll, POLL_MS);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
-  $('refresh').addEventListener('click', function () { location.reload(); });
+  $('refresh').addEventListener('click', function () { reloadKeepingPlace(); });
   var STATUS_DATA = null;
   try { STATUS_DATA = JSON.parse(document.getElementById('status-json').textContent || 'null'); } catch (e) { STATUS_DATA = null; }
   if (STATUS_DATA) { applyLive(STATUS_DATA); }
@@ -1142,6 +1159,7 @@ BOARD_JS = """
     if (STATUS_DATA && writeSeen(stateOf(STATUS_DATA))) applyLive(STATUS_DATA);
   });
   applyHash();
+  restoreScroll();
 """
 
 
@@ -1161,7 +1179,7 @@ def render_page(feed, agents, last_good_status=None, last_good_at=None, now=None
     else:
         status_json = None
     tasks_by_id = task_lookup(status_json)
-    embedded = json.dumps(status_json, ensure_ascii=False).replace('</', '<\\/')
+    embedded = json.dumps(status_json, ensure_ascii=False).replace('</', '<\\/').replace('<!--', '<\\u0021--')
     body = []
     body.append('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">')
     body.append('<meta name="viewport" content="width=device-width, initial-scale=1">')

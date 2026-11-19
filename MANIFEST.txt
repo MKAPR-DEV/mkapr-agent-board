@@ -1,5 +1,5 @@
 Agent Activity Board (TSK-016) — package manifest
-Version: v0.1.2 (local git tag, no remote)
+Version: v0.1.3 (local git tag, no remote)
 Built: 2026-11-19, Asia/Jakarta (WIB)
 
 This lists every file in the package with its SHA-256.
@@ -13,10 +13,8 @@ embed it are the 2026-11-19 12:07 status data with server
 hostnames redacted to placeholders, per the no-server-addresses
 rule for the repo. The unredacted file was validated in the
 workdir before redaction (0 errors, 1 known warning).
-
-
 9e51d31048c78344e9ecf5a004277b310e6afe6fa51c2797613804ec59d7683d  .gitignore
-f1f42b04289f8c66b92de37ae411d501b27fcc8fd2de65cb33968cde2355d4ff  README.md
+950f1ad930f451761d7fabfcd6089bc45980ff32a045d7046b170673670eabcb  README.md
 99e87f56aa0f10822daea175ee75c54d402c0e439cd6a42188009e34078bf829  config/agents.json
 bba32dd86ebeab8cdc79cfa39fc69aa76818f7d3052c5943de014cc912276c91  fixtures/feed-basic.json
 2cb735b5166eb21918f4fe116e9e6014b672ae649e2fa64763f8c0208ac3e070  fixtures/feed-canary.json
@@ -26,16 +24,16 @@ ff6b70ef2d6b1557d44b831789d4eda679c40d52bc325fb3c3c2a186735f926e  fixtures/feed-
 2767aac6b24b70e74e55acdd613e1ca8011bff55049e01a66058c8280e719ae2  fixtures/feed-stale.json
 964a576b3563741362de534307680c054fd93b9b235c920ba099819b552d3b77  fixtures/status.json
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  src/__init__.py
-4d5ed7bbcb7701ae1afc96e1699aa9eae8e65492059e4d95acbf1b8d20f6c75a  src/board_render.py
-18355ce9eed686a99d49480cd55e3c2aafba769c43aec77c648547934a2e987d  src/board_service.py
+28332dc6c74003a518c1941e817112976573e886b8c9baf7ffd5f028d6f2064f  src/board_render.py
+11a3bd8e5353c774db9a06ba735f2bfe6b74d2f89ac4c902d7b1a3a29700121c  src/board_service.py
 417e62f40d4f21d0460ebf55c30a13b4e8f4e5699eeff07758590bb37a284b0e  src/feed_states.py
 6a75d976a0629d5b1fcd58e2783c5ae96a4c5960c5670743dd25ddb9bd6f3f7f  src/figures.py
 cb2becd388fac6dbb8a5de7e383c8a4852fd670dc411c72ec1bbcdf1625f8521  src/validate.py
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  tests/__init__.py
 396b2f4a316154268516e602c64e58b072e6d781bf6b7fb05fe804ee757ec5bd  tests/helpers.py
 5bcdf9c8e662f3d4da59c96e545830c1f9ce3444696e47a4e4ec56cd234e201d  tests/test_parity.py
-4db87ba027427a899449d6038ac9c3d02e4f06151bcbf0848209809991649b86  tests/test_render.py
-aa3a4d291040f827422ed18ca177a921dddfb0a1c1effac820a09893be771568  tests/test_service.py
+6f4a279ff71585e5ade36b8234a1adb6cd70334498cf7c99c21448a3a37a36a4  tests/test_render.py
+5b6bb3345a39906ce3d2dd64f3249da8be03492940fabfcce7a1238a177cf8f9  tests/test_service.py
 b9ea4d85be2c3d5f7f7bcc3f26a01144bede700fad5fc6c2053196a609f846d3  tests/test_states.py
 4c38af262da34de4ec4e3256d8a1c45f2f0cd1c1856e665c2fc935f5361966fd  tests/test_status_fixture.py
 4488ac1a4564059f9d44d03fb8a054c9a4d66549722401505a568934bf2f1634  tests/test_validate_carried.py

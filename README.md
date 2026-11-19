@@ -66,7 +66,7 @@ curl -X POST -H 'Content-Type: application/json' \
 python3 -m unittest discover -s tests -v
 ```
 
-85 tests, all passing at v0.1.2:
+87 tests, all passing at v0.1.3:
 
 - service: health, page/feed password (401 without or with a wrong
   password), ingest auth (401 without or with a wrong token), wrong
@@ -88,7 +88,10 @@ python3 -m unittest discover -s tests -v
   and dark mode, phone-width rules, score to two decimals, map labels
   from tasks (never from message text), not-created agents as dashed
   cards, the delegation arrow, delivery links, keyboard-selectable task
-  rows, the feed tab capped at 50 events, the 30-second refresh.
+  rows, the feed tab capped at 50 events, the 30-second refresh (a
+  reload on a new feed keeps the tab hash and restores the scroll
+  position from sessionStorage), and the embedded status JSON escaping
+  both `</` and `<!--` while still parsing back to the same value.
 - parity (PRD criterion 17): against the real `status.json`, the
   Architecture figures match the Status page's build output exactly
   (same geometry, same status word and colour for all 29 bound ids,
@@ -214,7 +217,8 @@ fixed short reason), never hidden, never breaking the page.
 Tabs are real hash links (`#map`, `#arch`, `#delivery`, `#agents`,
 `#tasks`, `#feed`), so they bookmark and the back button works.
 The page polls `/feed.json` every 30 seconds and reloads when a new
-feed arrives. Light and dark mode follow the system setting; the page
+feed arrives; the reload keeps the tab hash and the open detail, and
+restores the scroll position saved in sessionStorage. Light and dark mode follow the system setting; the page
 works at 375 px with no sideways scroll (wide diagrams scroll inside
 their own box).
 

@@ -134,6 +134,42 @@ class RenderTests(unittest.TestCase):
         self.assertIn('id="mark-seen"', page)
         self.assertIn('id="chg-lede"', page)
 
+    def test_poll_reload_keeps_scroll_and_tab(self):
+        page = self._page()
+        # QC round 2, item 1: a reload on a new feed must not lose the
+        # scroll position or the open detail. The tab hash survives a
+        # reload in the URL; the scroll position is saved in
+        # sessionStorage (in try/catch) and restored after the reload.
+        self.assertIn('reloadKeepingPlace', page)
+        self.assertIn("var SCROLL_KEY = 'board.scrollY'", page)
+        self.assertIn('sessionStorage.setItem(SCROLL_KEY', page)
+        self.assertIn('sessionStorage.getItem(SCROLL_KEY', page)
+        self.assertIn('window.scrollTo(0, parseInt(y, 10)', page)
+        self.assertIn('restoreScroll();', page)
+
+    def test_status_json_comment_opener_is_escaped(self):
+        # QC round 2, item 2: a stray '<!--' in a status note must not
+        # reach the page raw (it could swallow the rest as a comment),
+        # and the embedded JSON must still parse back to the same value.
+        feed = load_fixture('feed-basic.json')
+        feed['status_json']['attention'][0] = (
+            'note <!-- <script>alert(1)</script> tail')
+        page = self._page(seed=feed)
+        block = page.split(
+            '<script type="application/json" id="status-json">')[1]
+        block = block.split('</script>')[0]
+        self.assertNotIn('<!--', block)
+        # The closing tag is escaped, not raw: only '</script' can end a
+        # script block, and the opening tag is harmless text inside JSON.
+        self.assertIn('<\\/script>', block)
+        self.assertNotIn('</script', block)
+        parsed = json.loads(block)
+        self.assertEqual(
+            parsed['attention'][0],
+            'note <!-- <script>alert(1)</script> tail')
+        # The same note in the page markup is HTML-escaped, not a tag.
+        self.assertIn('&lt;script&gt;alert', page)
+
     def test_feed_tab_is_capped_at_50(self):
         feed = load_fixture('feed-basic.json')
         for i in range(60):
