@@ -50,7 +50,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from board_render import render_page  # noqa: E402
 
-VERSION = '0.1.3'
+VERSION = '0.1.4'
 MAX_FEED_BYTES = 1024 * 1024  # 1 MB; a 10 MB body is rejected (criterion 11)
 SOCKET_TIMEOUT = 30  # seconds; a stalled client must not hold a thread
 WIB = timezone(timedelta(hours=7))

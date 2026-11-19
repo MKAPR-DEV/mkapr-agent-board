@@ -66,7 +66,7 @@ curl -X POST -H 'Content-Type: application/json' \
 python3 -m unittest discover -s tests -v
 ```
 
-87 tests, all passing at v0.1.3:
+89 tests, all passing at v0.1.4:
 
 - service: health, page/feed password (401 without or with a wrong
   password), ingest auth (401 without or with a wrong token), wrong
@@ -92,6 +92,14 @@ python3 -m unittest discover -s tests -v
   reload on a new feed keeps the tab hash and restores the scroll
   position from sessionStorage), and the embedded status JSON escaping
   both `</` and `<!--` while still parsing back to the same value.
+- mobile (v0.1.4): viewport meta, tabs wrap, buttons/tab links/map
+  pills at least 44 px tall, table rows 45 px, diagrams/map/tables
+  scroll inside their own box, and the map stacks two cards per row
+  on tablet, one per row on phone.
+- design A (v0.1.4, Deniel's pick): map cards carry a kind tint
+  (15%) with a 4 px coloured edge and the kind icon in a tinted
+  circle, and a brand badge top-right (C runs on Claude, M on Muse,
+  G on Grok; status and support have no brand assigned).
 - parity (PRD criterion 17): against the real `status.json`, the
   Architecture figures match the Status page's build output exactly
   (same geometry, same status word and colour for all 29 bound ids,

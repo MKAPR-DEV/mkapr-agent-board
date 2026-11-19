@@ -128,6 +128,41 @@ class RenderTests(unittest.TestCase):
         self.assertIn("fetch('/feed.json'", page)
         self.assertIn('Refresh now', page)
 
+    def test_mobile_layout_at_360px(self):
+        page = self._page()
+        # v0.1.4: the viewport meta so the page uses the device width.
+        self.assertIn(
+            '<meta name="viewport" content="width=device-width, initial-scale=1">',
+            page)
+        # Tabs wrap instead of forcing the page wide.
+        self.assertIn('nav.tabs { display: flex; flex-wrap: wrap;', page)
+        # Touch targets are at least 44 px: buttons, tab links and the
+        # map pills all carry min-height 44px.
+        self.assertGreaterEqual(page.count('min-height: 44px'), 4)
+        # Table rows are at least 44 px tall (12px cell padding + text).
+        self.assertIn('padding: 12px 12px;', page)
+        # Wide content scrolls inside its own box, never the page:
+        # diagrams, the Live map and tables each have overflow-x: auto.
+        self.assertIn('.scroll { overflow-x: auto;', page)
+        self.assertIn('.map-scroll { overflow-x: auto;', page)
+        self.assertIn('.table-scroll { overflow-x: auto;', page)
+
+    def test_design_a_kind_colours_and_brand_badges(self):
+        page = self._page()
+        # v0.1.4 Design A: kind tint + 4px edge, stronger than the mock.
+        self.assertIn('.map-card.k-session { background: rgba(22,111,67,0.15); border-left: 4px solid var(--live); }', page)
+        # Kind icon in a tinted circle, coloured, not muted grey.
+        self.assertIn('.map-card.k-person .kicon { background: rgba(44,80,173,0.20); color: var(--built); }', page)
+        # Brand badges top-right: 2 Claude, 4 Muse, 1 Grok; none for
+        # deniel, status or support.
+        self.assertEqual(page.count('class="brand brand-claude"'), 2)
+        self.assertEqual(page.count('class="brand brand-muse"'), 4)
+        self.assertEqual(page.count('class="brand brand-grok"'), 1)
+        self.assertEqual(page.count('class="brand '), 7)
+        # Tablet: two cards per row, no sideways scroll; phone: one.
+        self.assertIn('.map-row { display: grid; grid-template-columns: 1fr 1fr; }', page)
+        self.assertIn('.map-inner { min-width: 0; }', page)
+
     def test_what_changed_panel_uses_the_status_key(self):
         page = self._page()
         self.assertIn('statusmap.seen.v1', page)

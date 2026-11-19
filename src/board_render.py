@@ -41,6 +41,24 @@ STAGE_LABEL = {'design': 'Design', 'QC': 'QC', 'build': 'Build',
 
 # Map-kind icons: small inline SVG marks, no external images. The key under
 # the map explains them (PRD section 8.1).
+# Design A (v0.1.4, Deniel's pick): kind colours for the map cards, made
+# to pop a little more than the proposal mock — 15% tint, 4px edge,
+# icon in a 20% tinted circle. The edge and icon use the board's own
+# palette variables, so they adapt to dark mode; the state word and
+# dot keep their own colours. The kind word in .where stays muted.
+MAP_KINDS = ('person', 'session', 'scheduled', 'manual')
+# Which AI runs each agent, shown as a letter badge top-right of the
+# map card. Status and support have no brand assigned, so no badge.
+BRAND_BY_ID = {
+    'archie': ('claude', 'C'),
+    'operations': ('claude', 'C'),
+    'grok': ('grok', 'G'),
+    'muse-ping': ('muse', 'M'),
+    'muse-kb': ('muse', 'M'),
+    'muse-feed': ('muse', 'M'),
+    'muse-page': ('muse', 'M'),
+}
+BRAND_NAME = {'claude': 'Claude', 'muse': 'Muse', 'grok': 'Grok'}
 KIND_ICON = {
     'person': ('<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">'
                '<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/>'
@@ -263,8 +281,8 @@ header { display: flex; flex-direction: column; gap: 12px; }
 .score-s { color: var(--muted); font-size: 12.5px; max-width: 30ch; margin-left: auto; }
 .meta { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; color: var(--muted); font-size: 13.5px; }
 .meta b { color: var(--ink); font-weight: 600; }
-button { font: inherit; font-size: 13.5px; font-weight: 600; color: var(--accent); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
-a.btn { display: inline-block; font-size: 13.5px; font-weight: 600; color: var(--accent); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; text-decoration: none; }
+button { font: inherit; font-size: 13.5px; font-weight: 600; color: var(--accent); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; min-height: 44px; cursor: pointer; }
+a.btn { display: inline-flex; align-items: center; min-height: 44px; font-size: 13.5px; font-weight: 600; color: var(--accent); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; cursor: pointer; text-decoration: none; }
 a.btn:hover { border-color: var(--accent); }
 button:hover { border-color: var(--accent); }
 button:focus-visible, a:focus-visible, tr:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -309,7 +327,7 @@ button:focus-visible, a:focus-visible, tr:focus-visible { outline: 2px solid var
 .prio .p { font: 600 13px var(--mono); color: var(--muted); padding-top: 2px; }
 .prio .tasks .row:first-child { border-top: 1px solid var(--line); }
 [hidden] { display: none !important; }
-.chg { display: inline-block; margin-left: 8px; padding: 0 6px; border: 1px solid var(--accent); border-radius: 4px; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 1px; white-space: nowrap; }
+.chg { display: inline-block; margin-left: 8px; padding: 0 6px; border: 1px solid var(--accent); border-radius: 4px; color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 1px; white-space: nowrap; }
 .chg.down { border-color: var(--unknown); color: var(--unknown); }
 .change { grid-template-columns: 90px minmax(0, 1fr) minmax(0, 330px); }
 .change .kind { color: var(--muted); font-size: 13px; padding-top: 1px; }
@@ -347,7 +365,7 @@ footer { color: var(--muted); font-size: 13.5px; display: flex; flex-direction: 
 code { font: 12.5px var(--mono); background: var(--soft); padding: 1px 5px; border-radius: 4px; color: var(--ink); }
 /* tabs */
 nav.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 2px solid var(--line); }
-nav.tabs a { padding: 8px 14px; font-weight: 650; font-size: 14px; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+nav.tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; font-weight: 650; font-size: 14px; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -2px; }
 nav.tabs a[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
 nav.tabs a:hover { color: var(--ink); }
 /* live map */
@@ -356,9 +374,24 @@ nav.tabs a:hover { color: var(--ink); }
 .map-row { display: flex; gap: 10px; align-items: stretch; }
 .map-card { flex: 1 1 0; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: var(--surface); }
 .map-card.not-created { border-style: dashed; opacity: 0.75; }
+/* Design A: kind tint + coloured edge + tinted icon circle. */
+.map-card.k-person { background: rgba(44,80,173,0.15); border-left: 4px solid var(--built); }
+.map-card.k-session { background: rgba(22,111,67,0.15); border-left: 4px solid var(--live); }
+.map-card.k-scheduled { background: rgba(111,66,163,0.15); border-left: 4px solid var(--design); }
+.map-card.k-manual { background: rgba(143,84,0,0.15); border-left: 4px solid var(--partial); }
 .map-card .who { display: flex; gap: 8px; align-items: center; }
-.map-card .who svg { flex: none; color: var(--muted); }
-.map-card .nm { font-weight: 700; font-size: 14px; }
+.map-card .who svg { flex: none; }
+.map-card .kicon { flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--muted); }
+.map-card.k-person .kicon { background: rgba(44,80,173,0.20); color: var(--built); }
+.map-card.k-session .kicon { background: rgba(22,111,67,0.20); color: var(--live); }
+.map-card.k-scheduled .kicon { background: rgba(111,66,163,0.20); color: var(--design); }
+.map-card.k-manual .kicon { background: rgba(143,84,0,0.20); color: var(--partial); }
+.map-card .nm { font-weight: 700; font-size: 14px; flex: 1 1 auto; }
+/* Brand badge, top-right of the card: which AI runs this agent. */
+.brand { flex: none; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+.brand-claude { background: rgba(201,111,74,0.18); color: #c96f4a; }
+.brand-muse { background: rgba(44,80,173,0.16); color: var(--built); }
+.brand-grok { background: var(--soft); color: var(--ink); }
 .map-card .where { color: var(--muted); font-size: 12.5px; }
 .map-state { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; }
 .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
@@ -368,9 +401,9 @@ nav.tabs a:hover { color: var(--ink); }
 .dot-off { background: transparent; border: 2px solid var(--muted); }
 .dot-none { background: transparent; border: 2px dashed var(--muted); }
 .map-state.stale-word { color: var(--unknown); }
-.chip { display: inline-block; font-size: 12px; font-weight: 650; background: var(--soft); color: var(--muted); border-radius: 20px; padding: 2px 9px; }
+.chip { display: inline-block; font-size: 12.5px; font-weight: 650; background: var(--soft); color: var(--muted); border-radius: 20px; padding: 2px 9px; }
 .chip.amber { background: var(--amber-bg); color: var(--partial); }
-.map-label { display: block; border: 1px solid var(--line); border-radius: 20px; padding: 5px 11px; font-size: 12.5px; font-weight: 600; text-align: center; color: var(--ink); background: var(--soft); text-decoration: none; line-height: 1.35; overflow-wrap: anywhere; }
+.map-label { display: flex; align-items: center; justify-content: center; min-height: 44px; border: 1px solid var(--line); border-radius: 20px; padding: 5px 11px; font-size: 12.5px; font-weight: 600; text-align: center; color: var(--ink); background: var(--soft); text-decoration: none; line-height: 1.35; overflow-wrap: anywhere; }
 a.map-label:hover { border-color: var(--accent); }
 .map-label.unknown { border-style: dashed; color: var(--muted); background: transparent; font-weight: 500; }
 .map-bus { background: var(--accent); color: var(--surface); text-align: center; font-weight: 700; letter-spacing: 0.06em; border-radius: 8px; padding: 9px; font-size: 14px; }
@@ -378,7 +411,7 @@ a.map-label:hover { border-color: var(--accent); }
 .map-delegate .arr { font-weight: 700; color: var(--accent); }
 /* tables */
 table.board { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; font-size: 14px; }
-table.board th, table.board td { text-align: left; padding: 9px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+table.board th, table.board td { text-align: left; padding: 12px 12px; border-top: 1px solid var(--line); vertical-align: top; }
 table.board thead th { border-top: 0; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
 table.board tr[data-task] { cursor: pointer; }
 table.board tr[data-task]:hover { background: var(--soft); }
@@ -403,6 +436,9 @@ table.board td.id, table.board th.id { font: 12.5px var(--mono); }
 .unreadable code { overflow-wrap: anywhere; }
 @media (max-width: 900px) {
   .tasks-layout { grid-template-columns: minmax(0, 1fr); }
+  .map-inner { min-width: 0; }
+  .map-row { display: grid; grid-template-columns: 1fr 1fr; }
+  .map-delegate { grid-column: 1 / -1; }
 }
 @media (max-width: 720px) {
   .row, .intent, .task, .change, .prio .head { grid-template-columns: minmax(0, 1fr); gap: 3px; }
@@ -410,6 +446,7 @@ table.board td.id, table.board th.id { font: 12.5px var(--mono); }
   .score { margin-left: 0; text-align: left; }
   .score-s { margin-left: 0; }
   .detail dl { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .map-row { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: no-preference) { button { transition: border-color 0.15s; } }
 """
@@ -670,8 +707,14 @@ def render_map(feed, agents, tasks_by_id, now):
         elif word == 'needs a ping' and detail:
             state_txt = 'needs a ping (%s)' % detail
         icon = KIND_ICON.get(agent.get('kind'), KIND_ICON['manual'])
-        out = ['<div class="map-card%s">' % (' not-created' if word == 'not created' else '')]
-        out.append('<div class="who">%s<span class="nm">%s</span></div>' % (icon, E(aid)))
+        kind = agent.get('kind') or ''
+        kind_cls = (' k-' + kind) if kind in MAP_KINDS else ''
+        brand = BRAND_BY_ID.get(aid)
+        brand_html = ('<span class="brand brand-%s" title="Runs on %s">%s</span>'
+                      % (brand[0], BRAND_NAME[brand[0]], brand[1])) if brand else ''
+        out = ['<div class="map-card%s%s">' % (' not-created' if word == 'not created' else '', kind_cls)]
+        out.append('<div class="who"><span class="kicon">%s</span><span class="nm">%s</span>%s</div>'
+                   % (icon, E(aid), brand_html))
         out.append('<div class="where">%s · %s</div>' % (E(KIND_WORD.get(agent.get('kind'), 'agent')),
                                                           E(agent.get('runs_where') or '')))
         out.append('<div class="map-state%s"><span class="dot %s"></span>%s</div>'
@@ -709,7 +752,8 @@ def render_map(feed, agents, tasks_by_id, now):
     out.append('</div></div>')
     out.append('<div class="key"><span><i></i>waiting work</span><span><i class="d"></i>not live yet</span>'
                '<span>Dot: green working, amber waiting, red stale, hollow idle or off hours, dashed not created.</span>'
-               '<span>Icons: person, Claude Code session, scheduled chat, manual chat.</span></div>')
+               '<span>Icons: person, Claude Code session, scheduled chat, manual chat.</span>'
+               '<span>Badges: C runs on Claude, M on Muse, G on Grok.</span></div>')
     if not has_progress:
         out.append('<p class="note">In progress is not recorded &mdash; no started marker was seen in this feed. '
                    'The board shows Waiting and Answered only; it never guesses that work is in progress.</p>')
