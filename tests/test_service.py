@@ -237,6 +237,45 @@ class BindTests(unittest.TestCase):
     def test_main_refuses_to_start_without_a_bind(self):
         self.assertEqual(svc.main(['--port', '0']), 2)
 
+    def test_is_loopback(self):
+        self.assertTrue(svc.is_loopback('127.0.0.1'))
+        self.assertTrue(svc.is_loopback('127.0.0.2'))
+        self.assertTrue(svc.is_loopback('::1'))
+        self.assertFalse(svc.is_loopback('192.168.1.10'))
+        self.assertFalse(svc.is_loopback('10.0.0.5'))
+
+    def test_dev_mode_refuses_non_loopback_bind(self):
+        # QC round 1, item 1: --dev has no auth, so it must never serve
+        # beyond this machine. A tailnet address in --dev would serve the
+        # page and /ingest to the whole tailnet with no password/token.
+        self.assertEqual(svc.main(['--dev', '--bind', '192.168.1.10',
+                                   '--port', '0']), 2)
+
+
+class SocketTimeoutTests(unittest.TestCase):
+    """A stalled client must not hold a worker thread forever: the handler
+    sets a read timeout on the connection (QC round 1, item 3)."""
+
+    def test_stalled_client_is_closed(self):
+        import socket
+        old = svc.SOCKET_TIMEOUT
+        svc.SOCKET_TIMEOUT = 0.5
+        try:
+            srv = H.Server()
+            try:
+                s = socket.create_connection(('127.0.0.1', srv.port),
+                                             timeout=5)
+                s.sendall(b'GET / HTTP/1.1\r\nHost: x\r\n')
+                # No blank line: the request is never complete. The server
+                # must close the connection once the read times out.
+                s.settimeout(5)
+                self.assertEqual(s.recv(1024), b'')
+                s.close()
+            finally:
+                srv.stop()
+        finally:
+            svc.SOCKET_TIMEOUT = old
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=1)

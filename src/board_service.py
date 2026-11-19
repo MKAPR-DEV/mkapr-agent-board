@@ -50,8 +50,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from board_render import render_page  # noqa: E402
 
-VERSION = '0.1.0'
+VERSION = '0.1.2'
 MAX_FEED_BYTES = 1024 * 1024  # 1 MB; a 10 MB body is rejected (criterion 11)
+SOCKET_TIMEOUT = 30  # seconds; a stalled client must not hold a thread
 WIB = timezone(timedelta(hours=7))
 
 CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
@@ -97,6 +98,11 @@ def validate_bind(address):
                          'listen on one explicit address, never all interfaces'
                          % text)
     return text
+
+
+def is_loopback(address):
+    """True when the address is a loopback address (127.0.0.0/8 or ::1)."""
+    return ipaddress.ip_address(address).is_loopback
 
 
 def parse_time(value):
@@ -288,6 +294,9 @@ def make_handler(store, agents, password_sha256, feed_token):
     class Handler(BaseHTTPRequestHandler):
         server_version = 'AgentBoard/%s' % VERSION
         sys_version = ''
+        # A stalled client must not hold a worker thread forever: the
+        # stdlib sets this read timeout on the connection in setup().
+        timeout = SOCKET_TIMEOUT
 
         def log_message(self, fmt, *args):
             # Log method, path and status only. Never a body or a header:
@@ -436,6 +445,13 @@ def main(argv=None):
         bind = validate_bind(a.bind)
     except ValueError as e:
         print('Cannot start: %s' % e, file=sys.stderr)
+        return 2
+    if a.dev and not is_loopback(bind):
+        # --dev has no auth at all, so it must never serve beyond this
+        # machine: a tailnet address in --dev would serve the page and
+        # /ingest to the whole tailnet with no password and no token.
+        print('Cannot start: --dev only listens on loopback (127.0.0.0/8 '
+              'or ::1); %s is not loopback.' % bind, file=sys.stderr)
         return 2
     password_sha256 = os.environ.get('BOARD_PAGE_PASSWORD_SHA256')
     feed_token = os.environ.get('BOARD_FEED_TOKEN')

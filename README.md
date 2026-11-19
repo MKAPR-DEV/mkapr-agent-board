@@ -66,14 +66,16 @@ curl -X POST -H 'Content-Type: application/json' \
 python3 -m unittest discover -s tests -v
 ```
 
-82 tests, all passing at v0.1.1:
+85 tests, all passing at v0.1.2:
 
 - service: health, page/feed password (401 without or with a wrong
   password), ingest auth (401 without or with a wrong token), wrong
   version / bad JSON / bad types → 400 with the last good feed kept,
   oversize body → 413, any method other than GET/POST to the four
   endpoints → 405, unknown path → 404, feed survives a restart (the
-  store reloads from disk), no outbound-request code in the service.
+  store reloads from disk), no outbound-request code in the service,
+  `--dev` refuses a non-loopback bind, a stalled client is closed
+  after the read timeout.
 - canary: `CANARY-BODY-123` placed in a fixture body appears nowhere in
   the page, the served feed, the saved feed file or the logs; unknown
   feed fields are dropped at ingest, never stored.
@@ -161,7 +163,13 @@ says so ("(last good copy)").
 | Agents file | `--agents` | Default `config/agents.json`. |
 
 Without `--dev`, the service exits (code 2) if the bind address is
-missing/invalid or if either secret is unset. `--dev` is local-only.
+missing/invalid or if either secret is unset. `--dev` is local-only: it
+listens on loopback only and refuses any other bind address.
+
+The page password must be long and random (20+ characters, generated, not
+a word or a date). It is checked as an unsalted SHA-256 hash, and there is
+no lockout after failed attempts — so a short or guessable password can be
+brute-forced. Deniel sets it at install time.
 
 ## The page, briefly
 
