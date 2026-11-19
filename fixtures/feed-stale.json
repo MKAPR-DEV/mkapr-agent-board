@@ -1,0 +1,740 @@
+{
+ "version": 1,
+ "generated_at": "2026-11-19T09:00:00+07:00",
+ "agents": [
+  {
+   "id": "deniel",
+   "kind": "person",
+   "last_seen": "2026-11-19T09:00:00+07:00",
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": null
+  },
+  {
+   "id": "archie",
+   "kind": "session",
+   "last_seen": "2026-11-19T09:55:00+07:00",
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": "TSK-016"
+  },
+  {
+   "id": "operations",
+   "kind": "session",
+   "last_seen": "2026-11-19T09:50:00+07:00",
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": null
+  },
+  {
+   "id": "grok",
+   "kind": "scheduled",
+   "last_seen": "2026-11-19T09:40:00+07:00",
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": null
+  },
+  {
+   "id": "muse-ping",
+   "kind": "manual",
+   "last_seen": "2026-11-19T09:20:00+07:00",
+   "inbox_count": 1,
+   "oldest_wait_min": 14,
+   "doing_task": "TSK-015"
+  },
+  {
+   "id": "muse-kb",
+   "kind": "manual",
+   "last_seen": "2026-11-19T09:32:00+07:00",
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": "TSK-012"
+  },
+  {
+   "id": "muse-feed",
+   "kind": "manual",
+   "last_seen": null,
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": null
+  },
+  {
+   "id": "muse-page",
+   "kind": "manual",
+   "last_seen": null,
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": null
+  },
+  {
+   "id": "status",
+   "kind": "scheduled",
+   "last_seen": "2026-11-19T09:00:00+07:00",
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": null
+  },
+  {
+   "id": "support",
+   "kind": "manual",
+   "last_seen": "2026-11-19T09:30:00+07:00",
+   "inbox_count": 1,
+   "oldest_wait_min": 8,
+   "doing_task": null
+  }
+ ],
+ "threads": [
+  {
+   "thread_id": "20261119-094400_archie-to-muse-ping_tsk-015-repeat-test",
+   "task": "TSK-015",
+   "slug": "tsk-015-repeat-test",
+   "state": "WAITING",
+   "ball_with": "muse-ping",
+   "where": "inbox/muse/",
+   "since": "2026-11-19T09:44:00+07:00",
+   "latest_action": "request",
+   "messages": [
+    {
+     "time": "2026-11-19T09:44:00+07:00",
+     "from": "archie",
+     "to": "muse-ping",
+     "action": "request",
+     "slug": "tsk-015-repeat-test",
+     "msg_id": "20261119-094400_archie-to-muse-ping_tsk-015-repeat-test"
+    }
+   ]
+  },
+  {
+   "thread_id": "20261119-091000_operations-to-muse-kb_tsk-012-deploy-script",
+   "task": "TSK-012",
+   "slug": "tsk-012-deploy-script",
+   "state": "ANSWERED",
+   "ball_with": "muse-kb",
+   "where": "inbox/muse/",
+   "since": "2026-11-19T09:10:00+07:00",
+   "latest_action": "reply",
+   "messages": [
+    {
+     "time": "2026-11-19T09:10:00+07:00",
+     "from": "operations",
+     "to": "muse-kb",
+     "action": "request",
+     "slug": "tsk-012-deploy-script",
+     "msg_id": "20261119-091000_operations-to-muse-kb_tsk-012-deploy-script"
+    },
+    {
+     "time": "2026-11-19T09:32:00+07:00",
+     "from": "muse-kb",
+     "to": "operations",
+     "action": "reply",
+     "slug": "tsk-012-deploy-script",
+     "msg_id": "20261119-093200_muse-kb-to-operations_tsk-012-deploy-script",
+     "in_reply_to": "20261119-091000_operations-to-muse-kb_tsk-012-deploy-script"
+    }
+   ]
+  },
+  {
+   "thread_id": "20261119-095000_archie-to-support_check-a-report",
+   "task": "",
+   "slug": "check-a-report",
+   "state": "WAITING",
+   "ball_with": "support",
+   "where": "inbox/support/",
+   "since": "2026-11-19T09:50:00+07:00",
+   "latest_action": "request",
+   "messages": [
+    {
+     "time": "2026-11-19T09:50:00+07:00",
+     "from": "archie",
+     "to": "support",
+     "action": "request",
+     "slug": "check-a-report",
+     "msg_id": "20261119-095000_archie-to-support_check-a-report"
+    }
+   ]
+  }
+ ],
+ "reports": [
+  {
+   "time": "2026-11-19T09:35:00+07:00",
+   "from": "Muse-Ping",
+   "to": "Ops",
+   "type": "REPORT",
+   "topic": "tsk-015-repeat-test"
+  },
+  {
+   "time": "2026-11-19T09:20:00+07:00",
+   "from": "Operations",
+   "to": "Deniel",
+   "type": "REPORT",
+   "topic": "tsk-012-readiness"
+  }
+ ],
+ "human_inbox": [],
+ "unreadable": [],
+ "status_json": {
+  "updated": "2026-11-19T12:07:00+07:00",
+  "updated_by": "@operations (Ops)",
+  "architecture_version": "1.26",
+  "intents": [
+   {
+    "n": 1,
+    "name": "An employee submits an IT ticket",
+    "path": "Route R4, then Aiti employee mode",
+    "status": "live",
+    "note": ""
+   },
+   {
+    "n": 2,
+    "name": "IT staff ask a general technical question",
+    "path": "Route R4, then Aiti IT mode",
+    "status": "live",
+    "note": ""
+   },
+   {
+    "n": 3,
+    "name": "IT staff ask for ticket status or search",
+    "path": "Route R4, then Aiti IT mode",
+    "status": "live",
+    "note": ""
+   },
+   {
+    "n": 4,
+    "name": "A Knowledge Base entry is approved by WhatsApp reply",
+    "path": "Route R2, then KB reply receiver, then Python",
+    "status": "design",
+    "note": "All parts are built in source. Gateway R2 was imported on 18 Nov 2026 and is live but switched off (kb_route_mode off). The KB code deploy, the receiver import and the end-to-end test are still to do."
+   },
+   {
+    "n": 5,
+    "name": "Ping listens in work groups",
+    "path": "Route R1, then Ping Ingress",
+    "status": "partial",
+    "note": "Routing is live. Nothing is stored yet beyond a log row."
+   }
+  ],
+  "delivery": [
+   {
+    "p": 1,
+    "name": "Baseline",
+    "state": "done",
+    "note": "Baseline is done, including the clean-up (TSK-007).",
+    "tasks": [
+     {
+      "id": "TSK-001",
+      "title": "Export every live workflow and record raw and semantic hashes",
+      "state": "done",
+      "owner": "Muse-Ping"
+     },
+     {
+      "id": "TSK-002",
+      "title": "Collect the missing Aiti build sources and design files",
+      "state": "done",
+      "owner": "Muse-Ping"
+     },
+     {
+      "id": "TSK-003",
+      "title": "Compare each live export with its source by semantic hash",
+      "state": "done",
+      "owner": "Muse-Ping"
+     },
+     {
+      "id": "TSK-004",
+      "title": "Make /Aiti readable, place the intake source, export the live-only Aiti workflows, put /Aiti under local git",
+      "state": "done",
+      "owner": "Muse-Ping"
+     },
+     {
+      "id": "TSK-005",
+      "title": "Back-port the SunFish email rule into its source",
+      "state": "done",
+      "owner": "Muse-Ping"
+     },
+     {
+      "id": "TSK-007",
+      "title": "Clean the SharePoint test rows and stray files (inventory first, deletion after your OK)",
+      "state": "done",
+      "owner": "Muse-KB"
+     }
+    ]
+   },
+   {
+    "p": 2,
+    "name": "Close the KB loop",
+    "state": "in_progress",
+    "note": "Fourth sprint (15 Nov). TSK-007 to TSK-011 are done. The Gateway R2 import is done: imported on 18 Nov 2026 at 16:08 WIB, after a first import at 16:02 was rolled back at 16:03 on a hash mismatch (second-hand, Muse-Ping). It is switched off (kb_route_mode off), and the group smoke test logged route=ping only. TSK-012 (can the new KB code go to the Consolidator host, no deploy): the readiness document (revision 7) is written and checked by Operation against the Architect's route decision, and the code bundle file is on the host (hash, size, owner and modes checked from your screenshots). Next: Grok-Infra saved the deploy script revision 2 (r2) on 18 Nov 2026 at 14:23 WIB (Evidence/2026-11-18, 17,705 bytes, SHA-256 e00403287d37c716eff5e6a4337ae2f30e086da088adddbf5c172ffb54cf5952; these are Grok-Infra's statements, second-hand, not recomputed by Operation). Revision 2 carries the three changes from the Architect's review of revision 1; that review message is in the bus archive, and its verdict on r2 has not been seen by Operation. The script is not staged and not run; a run needs your own approval on the server. Nothing from the KB side goes to production yet. The plan after that, per the Architect: KB deploy, receiver import and one end-to-end test; the shadow phase is dropped.",
+    "tasks": [
+     {
+      "id": "TSK-006",
+      "title": "Realign the KB clone to GitHub, export the two KB workflows, prepare the approval-path merge (no merge)",
+      "state": "done",
+      "owner": "Muse-KB"
+     },
+     {
+      "id": "TSK-008",
+      "title": "Build Gateway route R2, switched off, as a pull request (Architect QC before you merge)",
+      "state": "done",
+      "owner": "Muse-Ping"
+     },
+     {
+      "id": "TSK-009",
+      "title": "Fix the KB reply receiver contract in source: two pull requests, no import",
+      "state": "done",
+      "owner": "Muse-KB"
+     },
+     {
+      "id": "TSK-010",
+      "title": "KB reply receiver: Architect QC, named artefact, rollback export (import prep, no import)",
+      "state": "done",
+      "owner": "Muse-KB"
+     },
+     {
+      "id": "TSK-011",
+      "title": "Gateway R2: named artefact, rollback export, import runbook with ship state off (import prep, no import)",
+      "state": "done",
+      "owner": "Muse-Ping"
+     },
+     {
+      "id": "TSK-012",
+      "title": "KB pipeline main: deployment readiness for the Consolidator host (no deploy)",
+      "state": "in_progress",
+      "owner": "Muse-KB",
+      "stage": "import_prep",
+      "summary": "Check that the new KB code (main 06ca8064) can go to the Consolidator host. Plan rev7 and deploy script r2 are saved; nothing is deployed.",
+      "waiting_on": "Archie's check of script r2 (verdict not seen by Ops), then Deniel's OK on the server"
+     },
+     {
+      "id": "TSK-015",
+      "title": "Human inbox alert: n8n workflow that sends Deniel a WhatsApp alert for each new message in the bus human inbox (live since 18 Nov 2026 20:11 WIB, every 10 minutes; the same-msg_id repeat test is still open; live state is second-hand, Muse-Ping)",
+      "state": "in_progress",
+      "owner": "Muse-Ping",
+      "stage": "test",
+      "summary": "n8n workflow that sends a WhatsApp alert for each new message in the bus human inbox. Live since 18 Nov, every 10 minutes; the repeat test is still open.",
+      "waiting_on": "Muse-Ping: same-msg_id repeat test in live operation"
+     },
+     {
+      "id": "Later",
+      "title": "Import Gateway R2 alone, switched off, outside office hours, with smoke test and rollback (done 18 Nov 2026: imported 16:08 WIB, smoke test passed 16:19 WIB; second-hand, Muse-Ping)",
+      "state": "done",
+      "owner": "Muse-Ping"
+     },
+     {
+      "id": "Later",
+      "title": "Deploy the KB code to the host (needs your OK on the server)",
+      "state": "blocked",
+      "owner": "Muse-KB",
+      "summary": "Deploy KB code main 06ca8064 to the Consolidator host with the approved script. Needs Deniel's OK on the server.",
+      "waiting_on": "Script r2 check and Deniel's OK on the server"
+     },
+     {
+      "id": "Later",
+      "title": "Import the receiver, activate the two KB workflows and run one end-to-end test",
+      "state": "blocked",
+      "owner": "Muse-KB",
+      "summary": "Import the KB reply receiver, activate the two KB workflows and run one end-to-end test with kb_route_mode on.",
+      "waiting_on": "KB code deploy"
+     },
+     {
+      "id": "Later",
+      "title": "Build the Publisher",
+      "state": "blocked",
+      "owner": "Muse-KB",
+      "summary": "Build the KB Publisher. The design is approved; there is no code yet.",
+      "waiting_on": "Approval path: KB deploy, receiver import, end-to-end test"
+     }
+    ]
+   },
+   {
+    "p": 3,
+    "name": "Ticket quality",
+    "state": "not_started",
+    "note": "Analysis & Clarification fixes, then switch off the old analyser.",
+    "tasks": []
+   },
+   {
+    "p": 4,
+    "name": "Company-wide release",
+    "state": "not_started",
+    "note": "Clean the staff directory first, then the intro.",
+    "tasks": []
+   },
+   {
+    "p": 5,
+    "name": "Ping",
+    "state": "not_started",
+    "note": "Apply the group ingest, then the second number.",
+    "tasks": []
+   }
+  ],
+  "attention": [
+   "You reported on 18 Nov 2026 that you deleted the one kept gate backup folder on the server (/var/backups/infra-ops/20261111-120750-1dc2e725); this is your word and is not verified by Operation. You gave your OK for the 7-day gate-backup retention rule (ARCHITECTURE.md section 8, point 8) on 18 Nov 2026; that is the rule only. Whether the rule is set on the server is not confirmed, and setting it needs a separate OK from you.",
+   "The Postman files and the staff files are out of the OneDrive workspace and the recycle bin is emptied (you reported it on 14 Nov; Operation checked the folder only). The SunFish key is still treated as exposed; rotate it after v1.0.",
+   "Name an owner for WhatsApp Alert, Website Health Check and the KB connector.",
+   "Decide whether Aiti may email requesters (Analysis & Clarification, Phase B).",
+   "Correct the staff directory in SunFish (split and duplicate rows).",
+   "Aiti migration v10 is not applied. This is expected while Learn Daily is postponed."
+  ],
+  "elements": {
+   "waha": {
+    "name": "WAHA (WhatsApp HTTP API)",
+    "group": "Routing",
+    "status": "live",
+    "short": "one number, one session",
+    "note": "Core 2026.9.2, engine WEBJS, session \"default\". The image tag is \"latest\" and should be pinned.",
+    "owner": "Deniel (server)"
+   },
+   "gateway": {
+    "name": "Aiti Gateway",
+    "group": "Routing",
+    "status": "live",
+    "short": "n8n, no LLM, keeps no state",
+    "note": "Live since 11 Nov 2026. Updated on 18 Nov 2026 at 16:08 WIB with Route R2 (kb_route_mode off) after a first import at 16:02 was rolled back at 16:03 on a hash mismatch. Post-import checks and the smoke test passed (second-hand, Muse-Ping). The 1:1 smoke test: Aiti answered (reported by Deniel), no log row; Muse-Ping says 1:1 forwards are not logged by design (not verified by Archie). The group message logged route=ping. Before that it was confirmed equal to its accepted source on 12 Nov (TSK-003). One known defect: a phone-number cut that loses the last digit; it fails safe today.",
+    "owner": "Muse-Ping"
+   },
+   "r4": {
+    "name": "Route R4: helpdesk",
+    "group": "Routing",
+    "status": "live",
+    "short": "every other 1:1, fail-safe",
+    "note": "Any 1:1 chat that no other route claims goes to Aiti, including lookup failures.",
+    "owner": "Muse-Ping"
+   },
+   "r2": {
+    "name": "Route R2: KB approval",
+    "group": "Routing",
+    "status": "partial",
+    "short": "imported, switched off",
+    "note": "Imported into the live Gateway on 18 Nov 2026 at 16:08 WIB and switched off (kb_route_mode off, KB lists empty); a first import at 16:02 was rolled back at 16:03 on a hash mismatch (second-hand, Muse-Ping). The group smoke test logged route=ping only and nothing as route=kb. Turning it on belongs to the end-to-end test, after the KB deploy and the receiver import.",
+    "owner": "Muse-Ping"
+   },
+   "r1": {
+    "name": "Route R1: ping",
+    "group": "Routing",
+    "status": "live",
+    "short": "groups and group events",
+    "note": "Group traffic goes to Ping Ingress.",
+    "owner": "Muse-Ping"
+   },
+   "r3": {
+    "name": "Route R3: IT 1:1 to Ping",
+    "group": "Routing",
+    "status": "parked",
+    "short": "off on the shared number",
+    "note": "ADR-1: IT staff stay on Aiti while the number is shared.",
+    "owner": "Muse-Ping"
+   },
+   "r0": {
+    "name": "Route R0: drop",
+    "group": "Routing",
+    "status": "live",
+    "short": "own messages, broadcasts",
+    "note": "Own messages, broadcasts and unknown events are discarded; only the reason is logged.",
+    "owner": "Muse-Ping"
+   },
+   "aiti": {
+    "name": "Aiti helpdesk bot",
+    "group": "Handlers",
+    "status": "live",
+    "short": "",
+    "note": "Published version d14cdea7 (5 Nov 2026). A full workflow file equal to live is the accepted source; TSK-004 moves it to /Aiti with placeholders. Frozen until handover.",
+    "owner": "Muse-Ping, after handover"
+   },
+   "aiti_intake": {
+    "name": "Aiti: employee ticket intake",
+    "group": "Handlers",
+    "status": "live",
+    "short": "",
+    "note": "Core intent 1.",
+    "owner": "Muse-Ping, after handover"
+   },
+   "aiti_it_qa": {
+    "name": "Aiti: IT staff general questions",
+    "group": "Handlers",
+    "status": "live",
+    "short": "",
+    "note": "Core intent 2. Confirmed on the published workflow on 12 Nov 2026.",
+    "owner": "Muse-Ping, after handover"
+   },
+   "aiti_it_tickets": {
+    "name": "Aiti: IT staff ticket status and search",
+    "group": "Handlers",
+    "status": "live",
+    "short": "",
+    "note": "Core intent 3. Read-only osTicket lookup; the LLM never sees ticket rows.",
+    "owner": "Muse-Ping, after handover"
+   },
+   "kb_receiver": {
+    "name": "KB reply receiver",
+    "group": "Handlers",
+    "status": "built",
+    "short": "n8n, inactive",
+    "note": "The live copy is still the old one. The fix (answer after the SharePoint write, stop saving executions) is in source (TSK-009); import prep is done (TSK-010). Not imported.",
+    "owner": "Muse-KB, after handover"
+   },
+   "ping_ingress": {
+    "name": "Ping Ingress",
+    "group": "Handlers",
+    "status": "partial",
+    "short": "stub: logs metadata only",
+    "note": "Confirmed on 12 Nov: live is the 3-node stub. The full ingest was built and accepted as files but never applied.",
+    "owner": "Muse-Ping"
+   },
+   "ping_dm": {
+    "name": "Ping 1:1 chat",
+    "group": "Handlers",
+    "status": "parked",
+    "short": "waits for its own number",
+    "note": "Ping answers 1:1 only once it has a second WhatsApp number.",
+    "owner": "Muse-Ping"
+   },
+   "kb_connector": {
+    "name": "KB connector",
+    "group": "KB pipeline",
+    "status": "live",
+    "short": "submits facts",
+    "note": "Submits confirmed facts to the KB Inbox. No owner named; it returned no audit.",
+    "owner": "not assigned"
+   },
+   "kb_inbox": {
+    "name": "KB Inbox",
+    "group": "KB pipeline",
+    "status": "live",
+    "short": "SharePoint list",
+    "note": "",
+    "owner": "Muse-KB"
+   },
+   "consolidator": {
+    "name": "KB Consolidator",
+    "group": "KB pipeline",
+    "status": "partial",
+    "short": "Python, timer off",
+    "note": "The host runs main b306fed (303 tests). No timer unit is installed, as far as reported (second-hand, 15 Nov). First real run on 9 Nov produced K-0001 to K-0011. Update to main 06ca8064 is planned (TSK-012): the plan (revision 7) is written and checked, and the code bundle file is on the host (copied and hash-checked 15 Nov), but nothing is deployed.",
+    "owner": "Muse-KB"
+   },
+   "kb_waiting": {
+    "name": "KB Waiting for Approval",
+    "group": "KB pipeline",
+    "status": "live",
+    "short": "Pending entries",
+    "note": "Python is the only writer.",
+    "owner": "Muse-KB"
+   },
+   "digest_builder": {
+    "name": "Digest builder",
+    "group": "KB pipeline",
+    "status": "built",
+    "short": "Python, in main",
+    "note": "Part of the approval path, now in GitHub main 06ca8064 (397 tests off-host). Not deployed to the host.",
+    "owner": "Muse-KB"
+   },
+   "kb_outbox": {
+    "name": "KB Outbox",
+    "group": "KB pipeline",
+    "status": "live",
+    "short": "SharePoint list",
+    "note": "The TEST row was cleaned in TSK-007 (reported done).",
+    "owner": "Muse-KB"
+   },
+   "outbox_sender": {
+    "name": "KB Outbox sender",
+    "group": "KB pipeline",
+    "status": "built",
+    "short": "n8n, inactive",
+    "note": "Send, retry and no-duplicate were tested once. Live n8n is the only copy of this workflow.",
+    "owner": "Muse-KB, after handover"
+   },
+   "kb_replies": {
+    "name": "KB Replies",
+    "group": "KB pipeline",
+    "status": "live",
+    "short": "SharePoint list",
+    "note": "The synthetic test item was cleaned in TSK-007 (reported done).",
+    "owner": "Muse-KB"
+   },
+   "apply_replies": {
+    "name": "apply-replies",
+    "group": "KB pipeline",
+    "status": "built",
+    "short": "Python, in main",
+    "note": "In GitHub main 06ca8064. Never run against a real WhatsApp reply. Its timer is not installed on the server and is not part of the TSK-012 plan.",
+    "owner": "Muse-KB"
+   },
+   "publisher": {
+    "name": "KB Publisher",
+    "group": "KB pipeline",
+    "status": "design",
+    "short": "no code yet",
+    "note": "Design approved, including points G1 to G4. Build comes after the approval path.",
+    "owner": "Muse-KB"
+   },
+   "kb_library": {
+    "name": "Knowledge Base library",
+    "group": "KB pipeline",
+    "status": "live",
+    "short": "SharePoint files",
+    "note": "Folders projects, decisions and reference. File versions are kept for 90 days.",
+    "owner": "Deniel (content); Muse-KB (Publisher)"
+   },
+   "triage": {
+    "name": "Aiti Triage All Sources",
+    "group": "Background workers",
+    "status": "live",
+    "short": "",
+    "note": "Every 15 minutes, 08:00 to 16:00, Monday to Friday. Its accepted source will be an export of the live workflow (TSK-004), which already contains the once-a-day digest guard.",
+    "owner": "Muse-Ping, after handover"
+   },
+   "ac": {
+    "name": "Aiti Analysis & Clarification",
+    "group": "Background workers",
+    "status": "built",
+    "short": "",
+    "note": "Published but switched off (ac_enabled = false, dry run). Confirmed on 12 Nov: live runs the v1.5 code. Fixes F1 to F5 are open. Priority 3.",
+    "owner": "Muse-Ping, after handover"
+   },
+   "intake_analyser": {
+    "name": "Old analysis path inside the intake workflow",
+    "group": "Background workers",
+    "status": "partial",
+    "short": "",
+    "note": "Enabled, but it has skipped every ticket since 4 Nov. It is switched off when Analysis & Clarification goes live (ADR-3).",
+    "owner": "Muse-Ping, after handover"
+   },
+   "staff_sync": {
+    "name": "SunFish staff sync",
+    "group": "Background workers",
+    "status": "live",
+    "short": "",
+    "note": "Nightly at 02:00. The email rule is back-ported in the source (reported). ADR-14: the source must also drop two settings so it equals live. The staff directory has split and duplicate rows that affect routing.",
+    "owner": "Muse-Ping, after handover"
+   },
+   "wa_alert": {
+    "name": "WhatsApp Alert by employee email",
+    "group": "Background workers",
+    "status": "live",
+    "short": "",
+    "note": "Outbound only, started by a webhook; no n8n workflow calls it. No owner and no source found; frozen.",
+    "owner": "not assigned"
+   },
+   "health_check": {
+    "name": "Website Health Check",
+    "group": "Background workers",
+    "status": "live",
+    "short": "",
+    "note": "Monthly, sends one WhatsApp summary. No owner and no source found; frozen.",
+    "owner": "not assigned"
+   },
+   "erp_catalog": {
+    "name": "Schema catalog loader and report indexer",
+    "group": "Background workers",
+    "status": "live",
+    "short": "",
+    "note": "ERP table and report names only, no row data. Confirmed equal to their sources on 12 Nov.",
+    "owner": "Muse-Ping, after handover"
+   },
+   "pilot_intro": {
+    "name": "Aiti pilot intro",
+    "group": "Background workers",
+    "status": "built",
+    "short": "",
+    "note": "Manual one-off, inactive. Needed again for the company-wide release (Priority 4).",
+    "owner": "Muse-Ping, after handover"
+   },
+   "ping_ingest": {
+    "name": "Ping group ingest (step 3.1)",
+    "group": "Background workers",
+    "status": "built",
+    "short": "",
+    "note": "Built and QC-accepted as files. Migration ws v1.2 is not applied. Priority 5.",
+    "owner": "Muse-Ping"
+   },
+   "gateway_cleanup": {
+    "name": "Gateway nightly cleanup (02:15)",
+    "group": "Background workers",
+    "status": "unknown",
+    "short": "",
+    "note": "Stays \"not verified\" on purpose: the trigger is set correctly (02:15 daily), but the Gateway saves no successful executions, so no run can be seen. It is settled once the heartbeat row is added (ADR-8).",
+    "owner": "Muse-Ping"
+   },
+   "n8n": {
+    "name": "n8n",
+    "group": "Platform",
+    "status": "live",
+    "short": "",
+    "note": "Version 2.44.4 in Docker on <n8n-host>. 14 workflows was the last recorded count. The current count is not verified: the human inbox alert workflow (TSK-015) was added on 18 Nov 2026 and no Reports file gives a new number.",
+    "owner": "Deniel (server)"
+   },
+   "postgres": {
+    "name": "PostgreSQL, helpdesk database",
+    "group": "Platform",
+    "status": "live",
+    "short": "",
+    "note": "Holds the Aiti, Triage, Analysis and Ping tables.",
+    "owner": "Deniel (server)"
+   },
+   "osticket": {
+    "name": "osTicket",
+    "group": "Platform",
+    "status": "live",
+    "short": "",
+    "note": "Application on <helpdesk-host>; MySQL database ticketing_db on <db-host>. The mail fault of 13 Nov was the Microsoft 365 outage (your report, not verified by Operation).",
+    "owner": "Deniel"
+   },
+   "litellm": {
+    "name": "LiteLLM proxy",
+    "group": "Platform",
+    "status": "live",
+    "short": "",
+    "note": "LLM access for the n8n workflows.",
+    "owner": "Deniel (server)"
+   },
+   "sharepoint": {
+    "name": "SharePoint site ITKnowledgeBase",
+    "group": "Platform",
+    "status": "live",
+    "short": "",
+    "note": "Five lists and the Knowledge Base library.",
+    "owner": "Deniel"
+   },
+   "git_kb": {
+    "name": "Source control: KB pipeline",
+    "group": "Platform",
+    "status": "live",
+    "short": "",
+    "note": "GitHub mkapr-kb-pipeline. main at 06ca8064 (tree 88056f41). The host still runs b306fed; main is not the deployed code. Protection cannot be enforced on a private repository without the Team plan: the written rule, the Muse-KB pre-merge checklist and a main-tip check apply. The tip check is self-reported by Muse.",
+    "owner": "Muse-KB"
+   },
+   "git_gateway": {
+    "name": "Source control: Gateway and Ping",
+    "group": "Platform",
+    "status": "live",
+    "short": "",
+    "note": "GitHub whatsapp-gateway. main at 59c2f69f (tree 4ce084ce), includes Route R2 (off). The live Gateway was updated from this source on 18 Nov 2026 (R2 off); the live workflow differs from the repository file only in 4 n8n settings fields (binaryMode, timeSavedMode, callerPolicy, availableInMCP) and a regenerated webhook id, accepted by Deniel (second-hand, Muse-Ping).",
+    "owner": "Muse-Ping"
+   },
+   "git_aiti": {
+    "name": "Source control: Aiti",
+    "group": "Platform",
+    "status": "partial",
+    "short": "",
+    "note": "Private GitHub repository MKAPR-DEV/Aiti, main at 18ed403f (pushed 14 Nov, reported by Muse-Ping). The local clone still has to be realigned to GitHub.",
+    "owner": "Muse-Ping"
+   },
+   "secrets": {
+    "name": "Secret rotation",
+    "group": "Platform",
+    "status": "parked",
+    "short": "",
+    "note": "Webhook secret, former workspace token and key, and the SunFish API key (found in a workspace file on 13 Nov). Rotation deferred by decision; treat these as exposed until rotated.",
+    "owner": "Deniel (server)"
+   },
+   "gateway_log": {
+    "name": "Gateway log table (ws_gateway_log)",
+    "group": "Platform",
+    "status": "live",
+    "short": "",
+    "note": "In the helpdesk database. Stores route, reason and time only, never message text. Rows from the 11 Nov cutover are on file.",
+    "owner": "Muse-Ping"
+   }
+  }
+ }
+}

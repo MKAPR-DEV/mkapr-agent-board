@@ -1,0 +1,370 @@
+{
+ "version": 1,
+ "generated_at": "2026-11-19T09:58:00+07:00",
+ "agents": [
+  {
+   "id": "deniel",
+   "kind": "person",
+   "last_seen": "2026-11-19T09:00:00+07:00",
+   "inbox_count": 1,
+   "oldest_wait_min": 5,
+   "doing_task": null
+  },
+  {
+   "id": "archie",
+   "kind": "session",
+   "last_seen": "2026-11-19T09:55:00+07:00",
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": null
+  },
+  {
+   "id": "operations",
+   "kind": "session",
+   "last_seen": "2026-11-19T09:30:00+07:00",
+   "inbox_count": 1,
+   "oldest_wait_min": 30,
+   "doing_task": null
+  },
+  {
+   "id": "grok",
+   "kind": "scheduled",
+   "last_seen": "2026-11-19T09:40:00+07:00",
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": null
+  },
+  {
+   "id": "muse-ping",
+   "kind": "manual",
+   "last_seen": "2026-11-19T09:20:00+07:00",
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": null
+  },
+  {
+   "id": "muse-kb",
+   "kind": "manual",
+   "last_seen": "2026-11-19T09:45:00+07:00",
+   "inbox_count": 2,
+   "oldest_wait_min": 80,
+   "doing_task": "TSK-012"
+  },
+  {
+   "id": "muse-feed",
+   "kind": "manual",
+   "last_seen": null,
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": null
+  },
+  {
+   "id": "muse-page",
+   "kind": "manual",
+   "last_seen": "2026-11-19T09:10:00+07:00",
+   "inbox_count": 1,
+   "oldest_wait_min": 50,
+   "doing_task": "TSK-016"
+  },
+  {
+   "id": "status",
+   "kind": "scheduled",
+   "last_seen": "2026-11-19T09:00:00+07:00",
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": null
+  },
+  {
+   "id": "support",
+   "kind": "manual",
+   "last_seen": "2026-11-19T09:30:00+07:00",
+   "inbox_count": 0,
+   "oldest_wait_min": 0,
+   "doing_task": null
+  }
+ ],
+ "threads": [
+  {
+   "thread_id": "20261119-080000_operations-to-muse-kb_tsk-012-three-hops",
+   "task": "TSK-012",
+   "slug": "tsk-012-three-hops",
+   "state": "WAITING",
+   "ball_with": "muse-kb",
+   "where": "inbox/muse/",
+   "since": "2026-11-19T08:40:00+07:00",
+   "latest_action": "request",
+   "messages": [
+    {
+     "time": "2026-11-19T08:00:00+07:00",
+     "from": "operations",
+     "to": "muse-kb",
+     "action": "request",
+     "slug": "tsk-012-three-hops",
+     "msg_id": "20261119-080000_operations-to-muse-kb_tsk-012-three-hops"
+    },
+    {
+     "time": "2026-11-19T08:20:00+07:00",
+     "from": "muse-kb",
+     "to": "operations",
+     "action": "reply",
+     "slug": "tsk-012-three-hops",
+     "msg_id": "20261119-082000_muse-kb-to-operations_tsk-012-three-hops",
+     "in_reply_to": "20261119-080000_operations-to-muse-kb_tsk-012-three-hops"
+    },
+    {
+     "time": "2026-11-19T08:40:00+07:00",
+     "from": "operations",
+     "to": "muse-kb",
+     "action": "request",
+     "slug": "tsk-012-three-hops-follow-up",
+     "msg_id": "20261119-084000_operations-to-muse-kb_tsk-012-three-hops-follow-up"
+    }
+   ]
+  },
+  {
+   "thread_id": "20261119-090000_grok-to-operations_tsk-015-halt",
+   "task": "TSK-015",
+   "slug": "tsk-015-halt",
+   "state": "NEEDS_DENIEL",
+   "ball_with": "operations",
+   "where": "inbox/operations/",
+   "since": "2026-11-19T09:00:00+07:00",
+   "latest_action": "halt",
+   "messages": [
+    {
+     "time": "2026-11-19T08:50:00+07:00",
+     "from": "operations",
+     "to": "grok",
+     "action": "request",
+     "slug": "tsk-015-halt",
+     "msg_id": "20261119-085000_operations-to-grok_tsk-015-halt"
+    },
+    {
+     "time": "2026-11-19T09:00:00+07:00",
+     "from": "grok",
+     "to": "operations",
+     "action": "halt",
+     "slug": "tsk-015-halt",
+     "msg_id": "20261119-090000_grok-to-operations_tsk-015-halt",
+     "in_reply_to": "20261119-085000_operations-to-grok_tsk-015-halt"
+    }
+   ]
+  },
+  {
+   "thread_id": "20261119-091500_archie-to-muse-kb_tsk-012-early-reply",
+   "task": "TSK-012",
+   "slug": "tsk-012-early-reply",
+   "state": "ANSWERED",
+   "ball_with": "muse-kb",
+   "where": "inbox/muse/",
+   "since": "2026-11-19T09:15:00+07:00",
+   "latest_action": "reply",
+   "messages": [
+    {
+     "time": "2026-11-19T09:15:00+07:00",
+     "from": "archie",
+     "to": "muse-kb",
+     "action": "request",
+     "slug": "tsk-012-early-reply",
+     "msg_id": "20261119-091500_archie-to-muse-kb_tsk-012-early-reply"
+    },
+    {
+     "time": "2026-11-19T09:18:00+07:00",
+     "from": "muse-kb",
+     "to": "archie",
+     "action": "reply",
+     "slug": "tsk-012-early-reply",
+     "msg_id": "20261119-091800_muse-kb-to-archie_tsk-012-early-reply",
+     "in_reply_to": "20261119-091500_archie-to-muse-kb_tsk-012-early-reply"
+    }
+   ]
+  },
+  {
+   "thread_id": "20261119-091000_archie-to-muse-page_tsk-016-build",
+   "task": "TSK-016",
+   "slug": "tsk-016-build",
+   "state": "IN_PROGRESS",
+   "ball_with": "muse-page",
+   "where": "inbox/muse/",
+   "since": "2026-11-19T09:10:00+07:00",
+   "latest_action": "request",
+   "messages": [
+    {
+     "time": "2026-11-19T09:10:00+07:00",
+     "from": "archie",
+     "to": "muse-page",
+     "action": "request",
+     "slug": "tsk-016-build",
+     "msg_id": "20261119-091000_archie-to-muse-page_tsk-016-build"
+    }
+   ]
+  },
+  {
+   "thread_id": "20261119-093000_archie-to-operations_tsk-015-stale",
+   "task": "TSK-015",
+   "slug": "tsk-015-stale",
+   "state": "STALE",
+   "ball_with": "operations",
+   "where": "inbox/operations/",
+   "since": "2026-11-19T09:30:00+07:00",
+   "latest_action": "request",
+   "messages": [
+    {
+     "time": "2026-11-19T09:30:00+07:00",
+     "from": "archie",
+     "to": "operations",
+     "action": "request",
+     "slug": "tsk-015-stale",
+     "msg_id": "20261119-093000_archie-to-operations_tsk-015-stale"
+    }
+   ]
+  }
+ ],
+ "reports": [
+  {
+   "time": "2026-11-19T09:35:00+07:00",
+   "from": "Muse-Ping",
+   "to": "Ops",
+   "type": "REPORT",
+   "topic": "tsk-015-repeat-test"
+  }
+ ],
+ "human_inbox": [
+  {
+   "time": "2026-11-19T09:55:00+07:00",
+   "from": "grok",
+   "action": "decision",
+   "slug": "tsk-012-deploy-or-hold",
+   "task": "TSK-012"
+  }
+ ],
+ "unreadable": [
+  {
+   "file": "20261119-090000_muse-ping-to-ops_bad-header.md",
+   "reason": "hop_count is 0, header does not match BUS_PROTOCOL"
+  }
+ ],
+ "status_json": {
+  "updated": "2026-11-19T09:30:00+07:00",
+  "updated_by": "Ops",
+  "architecture_version": "1.26",
+  "intents": [
+   {
+    "n": 1,
+    "name": "An employee submits an IT ticket",
+    "path": "Route R4, then Aiti employee mode",
+    "status": "live",
+    "note": ""
+   },
+   {
+    "n": 4,
+    "name": "A Knowledge Base entry is approved by WhatsApp reply",
+    "path": "Route R2, then KB reply receiver, then Python",
+    "status": "design",
+    "note": "All parts are built in source."
+   }
+  ],
+  "delivery": [
+   {
+    "p": 1,
+    "name": "Close the KB loop",
+    "state": "in_progress",
+    "note": "Fourth sprint.",
+    "tasks": [
+     {
+      "id": "TSK-012",
+      "title": "KB pipeline main: deployment readiness for the Consolidator host (no deploy)",
+      "state": "in_progress",
+      "owner": "Muse-KB",
+      "stage": "import_prep",
+      "summary": "Check that the new KB code can go to the Consolidator host.",
+      "waiting_on": "Archie's check of script r2, then Deniel's OK on the server"
+     },
+     {
+      "id": "TSK-015",
+      "title": "Human inbox alert: n8n workflow that sends Deniel a WhatsApp alert",
+      "state": "in_progress",
+      "owner": "Muse-Ping",
+      "stage": "test",
+      "summary": "n8n workflow that sends a WhatsApp alert for each new message in the bus human inbox.",
+      "waiting_on": "Muse-Ping: same-msg_id repeat test in live operation"
+     },
+     {
+      "id": "Later",
+      "title": "Deploy the KB code to the host",
+      "state": "blocked",
+      "owner": "Muse-KB"
+     }
+    ]
+   },
+   {
+    "p": 2,
+    "name": "Ticket quality",
+    "state": "not_started",
+    "note": "",
+    "tasks": []
+   }
+  ],
+  "attention": [
+   "Name an owner for WhatsApp Alert, Website Health Check and the KB connector."
+  ],
+  "elements": {
+   "waha": {
+    "name": "WAHA (WhatsApp HTTP API)",
+    "group": "Routing",
+    "status": "live",
+    "short": "one number, one session",
+    "note": "",
+    "owner": "Deniel (server)"
+   },
+   "gateway": {
+    "name": "Aiti Gateway",
+    "group": "Routing",
+    "status": "live",
+    "short": "n8n, no LLM, keeps no state",
+    "note": "",
+    "owner": "Muse-Ping"
+   },
+   "r2": {
+    "name": "Route R2: KB approval",
+    "group": "Routing",
+    "status": "partial",
+    "short": "imported, switched off",
+    "note": "",
+    "owner": "Muse-Ping"
+   },
+   "kb_receiver": {
+    "name": "KB reply receiver",
+    "group": "Handlers",
+    "status": "built",
+    "short": "n8n, inactive",
+    "note": "",
+    "owner": "Muse-KB, after handover"
+   },
+   "publisher": {
+    "name": "KB Publisher",
+    "group": "KB pipeline",
+    "status": "design",
+    "short": "no code yet",
+    "note": "Design approved.",
+    "owner": "Muse-KB"
+   },
+   "ping_dm": {
+    "name": "Ping 1:1 chat",
+    "group": "Handlers",
+    "status": "parked",
+    "short": "waits for its own number",
+    "note": "",
+    "owner": "Muse-Ping"
+   },
+   "gateway_cleanup": {
+    "name": "Gateway nightly cleanup (02:15)",
+    "group": "Background workers",
+    "status": "unknown",
+    "short": "",
+    "note": "Stays \"not verified\" on purpose.",
+    "owner": "Muse-Ping"
+   }
+  }
+ }
+}

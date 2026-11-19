@@ -1,0 +1,11 @@
+# Runtime files and working inputs stay out of the repo.
+data/
+__pycache__/
+*.pyc
+# The package archive itself, when built in the workdir.
+*.tar.gz
+# Working inputs (PRD, brief, Status handover copies, fixture generator):
+# they live in the workdir but are never committed.
+docs/
+handover/
+tools/
