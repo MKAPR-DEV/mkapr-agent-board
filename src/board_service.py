@@ -14,6 +14,20 @@ Endpoints (PRD section 10):
 
 Any other method returns 405. Any other path returns 404.
 
+With ``--lan-bind ADDR`` (or ``BOARD_LAN_BIND``), the service also
+listens on that LAN address, in the same process, sharing the same feed
+state. The LAN listener is read-only: it serves only ``GET``/``HEAD`` on
+``/``, ``/feed.json`` and ``/health`` (same page password on ``/`` and
+``/feed.json``, ``/health`` unauthenticated). Everything else, including
+``/ingest`` with any method, returns 404 there and never reaches the feed
+token code. The LAN address must be a single IPv4 address, never
+``0.0.0.0``; an empty or unset value means no LAN listener. If the LAN
+address cannot bind, the service fails to start (no silent fallback).
+``--dev`` with a non-loopback LAN address is refused, like ``--bind``.
+
+Cache: ``/`` and ``/feed.json`` send ``Cache-Control: no-store``, so a
+reverse proxy must not cache a logged-in page.
+
 Auth, all set at install time, never in the repo:
 
 - ``BOARD_PAGE_PASSWORD_SHA256``: hex SHA-256 of the shared page password.
@@ -24,9 +38,18 @@ Auth, all set at install time, never in the repo:
   other unspecified address), because the host has no firewall (PRD
   section 10, criterion 10). The real address is set at install time from
   the host and is never written into the repo.
+- ``BOARD_LAN_BIND`` (or ``--lan-bind``): the second, read-only listen
+  address, a single IPv4 address. The command-line argument wins when
+  both are set; empty or unset means no LAN listener.
 
 ``--dev`` runs with no auth, for local fixture runs only. Never use it on
 the server.
+
+There is no login throttling or lockout, and nothing keys on the client
+IP: every page request is one SHA-256 compare, so putting the service
+behind a reverse proxy (PRX01) changes nothing about login behaviour.
+If a lockout is ever added, it must key on ``X-Forwarded-For`` only from
+a trusted proxy address, never on the connecting address alone.
 
 The service is a dumb viewer: it parses no OneDrive data itself, sends
 nothing out, and never logs a feed body, a password or a token. Ingest
@@ -50,7 +73,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from board_render import render_page  # noqa: E402
 
-VERSION = '0.1.5'
+VERSION = '0.1.6'
 MAX_FEED_BYTES = 1024 * 1024  # 1 MB; a 10 MB body is rejected (criterion 11)
 SOCKET_TIMEOUT = 30  # seconds; a stalled client must not hold a thread
 WIB = timezone(timedelta(hours=7))
@@ -103,6 +126,30 @@ def validate_bind(address):
 def is_loopback(address):
     """True when the address is a loopback address (127.0.0.0/8 or ::1)."""
     return ipaddress.ip_address(address).is_loopback
+
+
+def validate_lan_bind(address):
+    """The LAN bind address: empty means no LAN listener.
+
+    Returns the address, or None when it is unset or empty. Raises
+    ValueError when it is not a single IPv4 address (a hostname, an IPv6
+    address, a CIDR, a port suffix, or a bare colon are all rejected), or
+    when it is 0.0.0.0.
+    """
+    if address is None or str(address).strip() == '':
+        return None
+    text = str(address).strip()
+    try:
+        ip = ipaddress.IPv4Address(text)
+    except ValueError:
+        raise ValueError('LAN bind address %r is not a single IPv4 address: '
+                         'give one address, no port, no hostname, no CIDR'
+                         % text)
+    if ip.is_unspecified:
+        raise ValueError('LAN bind address %r is not allowed: the service '
+                         'must listen on one explicit address, never all '
+                         'interfaces' % text)
+    return text
 
 
 def parse_time(value):
@@ -287,9 +334,13 @@ def check_feed_token(handler, feed_token):
     return hmac.compare_digest(token, feed_token)
 
 
-def make_handler(store, agents, password_sha256, feed_token):
+def make_handler(store, agents, password_sha256, feed_token, read_only=False):
     """Build the request handler. ``password_sha256`` / ``feed_token`` are
-    None in --dev mode (no auth), which must never be used on the server."""
+    None in --dev mode (no auth), which must never be used on the server.
+
+    ``read_only`` builds the LAN listener: only GET/HEAD on /, /feed.json
+    and /health; everything else returns 404 before any auth or token code
+    runs, so /ingest can never be reached through it."""
 
     class Handler(BaseHTTPRequestHandler):
         server_version = 'AgentBoard/%s' % VERSION
@@ -325,7 +376,7 @@ def make_handler(store, agents, password_sha256, feed_token):
             self._reply(401, b'Password required.\n',
                         extra={'WWW-Authenticate': 'Basic realm="Agent Activity Board"'})
 
-        def _serve_page(self):
+        def _serve_page(self, head=False):
             if not check_page_password(self, password_sha256):
                 return self._unauthorised()
             # The raw stored feed: render_page does the last-good status
@@ -338,29 +389,45 @@ def make_handler(store, agents, password_sha256, feed_token):
                                last_good_at=last_at,
                                now=datetime.now(WIB))
             self._reply(200, html.encode('utf-8'),
-                        'text/html; charset=utf-8', 'no-cache')
+                        'text/html; charset=utf-8', 'no-store', head=head)
 
-        def _serve_feed(self):
+        def _serve_feed(self, head=False):
             if not check_page_password(self, password_sha256):
                 return self._unauthorised()
             feed = store.effective_feed()
             self._reply(200, json.dumps(feed, ensure_ascii=False).encode('utf-8'),
-                        'application/json; charset=utf-8', 'no-store')
+                        'application/json; charset=utf-8', 'no-store', head=head)
 
-        def do_GET(self):
+        def _do_get(self, head=False):
             path = self.path.split('?', 1)[0].split('#', 1)[0]
+            if read_only and path not in ('/', '/index.html', '/feed.json',
+                                          '/health'):
+                # The LAN listener exposes only these paths; /ingest and
+                # anything else 404s here, before any token code runs.
+                return self._reply(404, b'Not found.\n')
             if path in ('/', '/index.html'):
-                return self._serve_page()
+                return self._serve_page(head=head)
             if path == '/feed.json':
-                return self._serve_feed()
+                return self._serve_feed(head=head)
             if path == '/health':
                 return self._reply(200, b'{"status":"ok"}',
-                                   'application/json; charset=utf-8', 'no-store')
+                                   'application/json; charset=utf-8',
+                                   'no-store', head=head)
             if path == '/favicon.ico':
                 return self._reply(204)
             return self._reply(404, b'Not found.\n')
 
+        def do_GET(self):
+            return self._do_get(head=False)
+
+        def do_HEAD(self):
+            if read_only:
+                return self._do_get(head=True)
+            return self._no()
+
         def do_POST(self):
+            if read_only:
+                return self._reply(404, b'Not found.\n')
             path = self.path.split('?', 1)[0].split('#', 1)[0]
             if path != '/ingest':
                 return self._reply(405, b'Method not allowed.\n')
@@ -400,9 +467,11 @@ def make_handler(store, agents, password_sha256, feed_token):
                 'application/json; charset=utf-8', 'no-store')
 
         def _no(self):
+            if read_only:
+                return self._reply(404, b'Not found.\n')
             self._reply(405, b'Method not allowed.\n')
 
-        do_PUT = do_DELETE = do_PATCH = do_OPTIONS = do_HEAD = do_TRACE = _no
+        do_PUT = do_DELETE = do_PATCH = do_OPTIONS = do_TRACE = _no
 
     return Handler
 
@@ -416,7 +485,9 @@ def load_agents(path):
     return agents
 
 
-def main(argv=None):
+def parse_args(argv=None):
+    """The command line. The --lan-bind default comes from BOARD_LAN_BIND,
+    so the command-line argument wins when both are set."""
     here = os.path.dirname(os.path.abspath(__file__))
     root = os.path.dirname(here)
     ap = argparse.ArgumentParser(
@@ -425,10 +496,16 @@ def main(argv=None):
     ap.add_argument('--bind', default=os.environ.get('BOARD_BIND'),
                     help='Listen address (required; never 0.0.0.0 or ::). '
                          'Set at install time from the host.')
+    ap.add_argument('--lan-bind', default=os.environ.get('BOARD_LAN_BIND'),
+                    help='Second, read-only listen address (a single IPv4 '
+                         'address; the command-line argument wins over '
+                         'BOARD_LAN_BIND). Empty or unset means no LAN '
+                         'listener. Set at install time from the host.')
     ap.add_argument('--port', type=int,
                     default=int(os.environ.get('BOARD_PORT', '8766')),
-                    help='Listen port (default 8766 for local runs; the '
-                         'install-time port is set by Grok-Infra and Deniel).')
+                    help='Listen port for both listeners (default 8766 for '
+                         'local runs; the install-time port is set by '
+                         'Grok-Infra and Deniel).')
     ap.add_argument('--data-dir', default=os.path.join(root, 'data'),
                     help='Folder for latest-feed.json (default ./data).')
     ap.add_argument('--agents',
@@ -440,9 +517,20 @@ def main(argv=None):
     ap.add_argument('--seed-feed',
                     help='Load this fixture feed at startup, with its '
                          'generated_at refreshed to now (local runs only).')
-    a = ap.parse_args(argv)
+    return ap.parse_args(argv)
+
+
+def main(argv=None):
+    here = os.path.dirname(os.path.abspath(__file__))
+    root = os.path.dirname(here)
+    a = parse_args(argv)
     try:
         bind = validate_bind(a.bind)
+    except ValueError as e:
+        print('Cannot start: %s' % e, file=sys.stderr)
+        return 2
+    try:
+        lan_bind = validate_lan_bind(a.lan_bind)
     except ValueError as e:
         print('Cannot start: %s' % e, file=sys.stderr)
         return 2
@@ -452,6 +540,12 @@ def main(argv=None):
         # /ingest to the whole tailnet with no password and no token.
         print('Cannot start: --dev only listens on loopback (127.0.0.0/8 '
               'or ::1); %s is not loopback.' % bind, file=sys.stderr)
+        return 2
+    if a.dev and lan_bind is not None and not is_loopback(lan_bind):
+        # Same rule for the second listener: no auth in --dev.
+        print('Cannot start: --dev only listens on loopback (127.0.0.0/8 '
+              'or ::1); the LAN address %s is not loopback.' % lan_bind,
+              file=sys.stderr)
         return 2
     password_sha256 = os.environ.get('BOARD_PAGE_PASSWORD_SHA256')
     feed_token = os.environ.get('BOARD_FEED_TOKEN')
@@ -487,13 +581,37 @@ def main(argv=None):
     handler = make_handler(store, agents,
                            None if a.dev else password_sha256,
                            None if a.dev else feed_token)
+    lan_handler = make_handler(store, agents,
+                               None if a.dev else password_sha256,
+                               None if a.dev else feed_token,
+                               read_only=True)
+    servers = []
     try:
         server = ThreadingHTTPServer((bind, a.port), handler)
+        servers.append(server)
     except OSError as e:
         print('Cannot listen on %s:%d: %s' % (bind, a.port, e), file=sys.stderr)
         return 1
+    lan_server = None
+    if lan_bind is not None:
+        try:
+            lan_server = ThreadingHTTPServer((lan_bind, a.port), lan_handler)
+            servers.append(lan_server)
+        except OSError as e:
+            # No silent fallback: if the LAN address cannot bind, the
+            # service does not start at all.
+            print('Cannot listen on %s:%d: %s' % (lan_bind, a.port, e),
+                  file=sys.stderr)
+            server.server_close()
+            return 1
     print('Agent Activity Board %s is running at http://%s:%d/'
           % (VERSION, bind, a.port))
+    if lan_server is not None:
+        print('Read-only LAN listener at http://%s:%d/ (page, feed and '
+              'health only; /ingest returns 404 there)' % (lan_bind, a.port))
+        lan_thread = threading.Thread(target=lan_server.serve_forever,
+                                      daemon=True)
+        lan_thread.start()
     print('Reading the kept feed from: %s' % store.data_dir)
     if a.dev:
         print('WARNING: --dev mode, no password and no feed token. Local runs only.')
@@ -503,7 +621,9 @@ def main(argv=None):
     except KeyboardInterrupt:
         print('\nStopped.')
     finally:
-        server.server_close()
+        for s in servers:
+            s.shutdown()
+            s.server_close()
     return 0
 
 

@@ -42,9 +42,13 @@ def basic_auth_header(password=TEST_PASSWORD):
 
 
 class Server(object):
-    """A board service on 127.0.0.1, ephemeral port, throwaway data dir."""
+    """A board service on 127.0.0.1, ephemeral port, throwaway data dir.
 
-    def __init__(self, seed=None):
+    ``lan=True`` also starts the read-only LAN listener (a second server
+    on 127.0.0.1, ephemeral port) sharing the same feed store, so tests
+    can check the two route sets against each other."""
+
+    def __init__(self, seed=None, lan=False):
         self.tmp = tempfile.TemporaryDirectory()
         self.store = svc.FeedStore(self.tmp.name)
         if seed is not None:
@@ -58,10 +62,26 @@ class Server(object):
         self.thread = threading.Thread(target=self.httpd.serve_forever,
                                        daemon=True)
         self.thread.start()
+        self.lan_httpd = None
+        self.lan_port = None
+        self.lan_thread = None
+        if lan:
+            lan_handler = svc.make_handler(
+                self.store, load_agents(), TEST_PASSWORD_SHA256, TEST_TOKEN,
+                read_only=True)
+            self.lan_httpd = ThreadingHTTPServer(('127.0.0.1', 0),
+                                                 lan_handler)
+            self.lan_port = self.lan_httpd.server_address[1]
+            self.lan_thread = threading.Thread(
+                target=self.lan_httpd.serve_forever, daemon=True)
+            self.lan_thread.start()
 
     def stop(self):
         self.httpd.shutdown()
         self.httpd.server_close()
+        if self.lan_httpd is not None:
+            self.lan_httpd.shutdown()
+            self.lan_httpd.server_close()
         self.tmp.cleanup()
 
     def request(self, method, path, body=None, headers=None):
@@ -78,6 +98,30 @@ class Server(object):
         if password is not None:
             headers['Authorization'] = basic_auth_header(password)
         return self.request('GET', path, headers=headers)
+
+    def lan_request(self, method, path, body=None, headers=None):
+        assert self.lan_httpd is not None, 'Server was started without lan=True'
+        conn = http.client.HTTPConnection('127.0.0.1', self.lan_port,
+                                          timeout=10)
+        hdrs = dict(headers or {})
+        conn.request(method, path, body=body, headers=hdrs)
+        resp = conn.getresponse()
+        data = resp.read()
+        conn.close()
+        return resp.status, dict(resp.getheaders()), data
+
+    def lan_get(self, path, password=TEST_PASSWORD):
+        headers = {}
+        if password is not None:
+            headers['Authorization'] = basic_auth_header(password)
+        return self.lan_request('GET', path, headers=headers)
+
+    def lan_ingest(self, feed, token=TEST_TOKEN, raw_body=None):
+        body = raw_body if raw_body is not None else json.dumps(feed).encode()
+        headers = {'Content-Type': 'application/json'}
+        if token is not None:
+            headers['X-Feed-Token'] = token
+        return self.lan_request('POST', '/ingest', body=body, headers=headers)
 
     def ingest(self, feed, token=TEST_TOKEN, raw_body=None):
         body = raw_body if raw_body is not None else json.dumps(feed).encode()

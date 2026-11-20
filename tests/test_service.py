@@ -277,5 +277,186 @@ class SocketTimeoutTests(unittest.TestCase):
             svc.SOCKET_TIMEOUT = old
 
 
+class LanBindTests(unittest.TestCase):
+    """v0.1.6: the LAN address must be one IPv4 address, never 0.0.0.0;
+    empty or unset means no LAN listener."""
+
+    def test_empty_means_no_lan_listener(self):
+        for empty in (None, '', '   '):
+            self.assertIsNone(svc.validate_lan_bind(empty), msg=repr(empty))
+
+    def test_accepts_a_single_ipv4_address(self):
+        self.assertEqual(svc.validate_lan_bind('192.168.2.10'),
+                         '192.168.2.10')
+        self.assertEqual(svc.validate_lan_bind('127.0.0.1'), '127.0.0.1')
+
+    def test_rejects_all_interfaces(self):
+        for bad in ('0.0.0.0', '::'):
+            with self.assertRaises(ValueError, msg=bad):
+                svc.validate_lan_bind(bad)
+
+    def test_rejects_empty_with_colon(self):
+        for bad in (':', ':8080', '192.168.2.10:'):
+            with self.assertRaises(ValueError, msg=bad):
+                svc.validate_lan_bind(bad)
+
+    def test_rejects_hostnames_ipv6_and_cidr(self):
+        for bad in ('example.com', 'localhost', '2001:db8::1',
+                    '10.0.0.0/24', '192.168.2.10/32', '192.168.2',
+                    '999.1.1.1'):
+            with self.assertRaises(ValueError, msg=bad):
+                svc.validate_lan_bind(bad)
+
+    def test_main_refuses_to_start_with_a_bad_lan_bind(self):
+        for bad in ('0.0.0.0', '::', ':', 'example.com'):
+            self.assertEqual(
+                svc.main(['--bind', '127.0.0.1', '--lan-bind', bad,
+                          '--port', '0']), 2, bad)
+
+    def test_dev_mode_refuses_a_non_loopback_lan_bind(self):
+        self.assertEqual(svc.main(['--dev', '--bind', '127.0.0.1',
+                                   '--lan-bind', '192.168.2.5',
+                                   '--port', '0']), 2)
+
+
+class LanEnvTests(unittest.TestCase):
+    """v0.1.6 amendment: BOARD_LAN_BIND carries the LAN address; the
+    --lan-bind argument wins when both are set."""
+
+    def test_env_var_is_the_default(self):
+        import unittest.mock as mock
+        with mock.patch.dict(os.environ,
+                             {'BOARD_LAN_BIND': '192.168.2.5'}):
+            self.assertEqual(svc.parse_args([]).lan_bind, '192.168.2.5')
+
+    def test_command_line_wins_over_the_env_var(self):
+        import unittest.mock as mock
+        with mock.patch.dict(os.environ,
+                             {'BOARD_LAN_BIND': '192.168.2.5'}):
+            self.assertEqual(
+                svc.parse_args(['--lan-bind', '192.168.2.9']).lan_bind,
+                '192.168.2.9')
+
+    def test_empty_env_var_means_no_lan_listener(self):
+        import unittest.mock as mock
+        with mock.patch.dict(os.environ, {'BOARD_LAN_BIND': ''}):
+            self.assertIsNone(
+                svc.validate_lan_bind(svc.parse_args([]).lan_bind))
+
+    def test_unset_env_var_means_no_lan_listener(self):
+        import unittest.mock as mock
+        env = dict(os.environ)
+        env.pop('BOARD_LAN_BIND', None)
+        with mock.patch.dict(os.environ, env, clear=True):
+            self.assertIsNone(svc.parse_args([]).lan_bind)
+
+
+class LanListenerTests(unittest.TestCase):
+    """v0.1.6: the second listener is read-only and shares the feed state."""
+
+    def setUp(self):
+        self.srv = H.Server(seed=load_fixture('feed-basic.json'), lan=True)
+
+    def tearDown(self):
+        self.srv.stop()
+
+    def test_version_string_is_0_1_6(self):
+        self.assertEqual(svc.VERSION, '0.1.6')
+        _, headers, _ = self.srv.request('GET', '/health')
+        self.assertEqual(headers.get('Server', '').strip(), 'AgentBoard/0.1.6')
+
+    def test_lan_serves_page_feed_and_health(self):
+        for path in ('/', '/feed.json'):
+            status, headers, body = self.srv.lan_get(path)
+            self.assertEqual(status, 200, path)
+            self.assertEqual(headers.get('Cache-Control'), 'no-store', path)
+            if path == '/':
+                self.assertIn(b'Agent Activity Board', body)
+        status, _, body = self.srv.lan_request('GET', '/health')
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {'status': 'ok'})
+
+    def test_page_is_no_store_on_both_listeners(self):
+        # Archie's proxy question: the page used to send no-cache; both
+        # listeners must now send no-store, like /feed.json.
+        for get in (self.srv.get, self.srv.lan_get):
+            _, headers, _ = get('/')
+            self.assertEqual(headers.get('Cache-Control'), 'no-store')
+
+    def test_lan_needs_the_same_password(self):
+        for path in ('/', '/feed.json'):
+            status, headers, _ = self.srv.lan_request('GET', path)
+            self.assertEqual(status, 401, path)
+            self.assertIn('WWW-Authenticate', headers)
+            status, _, _ = self.srv.lan_get(path, password='wrong-password')
+            self.assertEqual(status, 401, path)
+            status, _, _ = self.srv.lan_get(path)
+            self.assertEqual(status, 200, path)
+        status, _, _ = self.srv.lan_request('GET', '/health')
+        self.assertEqual(status, 200)
+
+    def test_lan_head_serves_headers_only(self):
+        for path in ('/', '/feed.json', '/health'):
+            headers = {}
+            if path != '/health':
+                headers['Authorization'] = H.basic_auth_header()
+            status, resp_headers, body = self.srv.lan_request(
+                'HEAD', path, headers=headers)
+            self.assertEqual(status, 200, path)
+            self.assertEqual(body, b'', path)
+            self.assertIn('Content-Length', resp_headers)
+
+    def test_lan_ingest_is_404_with_any_method_and_any_token(self):
+        feed = load_fixture('feed-basic.json')
+        # The correct token still 404s: the request never reaches the
+        # token code, so the token cannot leak a right/wrong signal.
+        for token in (H.TEST_TOKEN, 'wrong-token', None):
+            status, _, _ = self.srv.lan_ingest(feed, token=token)
+            self.assertEqual(status, 404, repr(token))
+        for method in ('GET', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'TRACE'):
+            status, _, _ = self.srv.lan_request(method, '/ingest')
+            self.assertEqual(status, 404, method)
+        # The feed on the main listener is unchanged by those attempts.
+        status, _, body = self.srv.get('/feed.json')
+        self.assertEqual(json.loads(body)['generated_at'],
+                         feed['generated_at'])
+
+    def test_lan_rejects_everything_else(self):
+        for method, path in (('POST', '/'), ('POST', '/feed.json'),
+                             ('PUT', '/'), ('DELETE', '/feed.json'),
+                             ('GET', '/nope'), ('GET', '/favicon.ico'),
+                             ('GET', '/ingest'), ('POST', '/health')):
+            status, _, _ = self.srv.lan_request(method, path)
+            self.assertEqual(status, 404, '%s %s' % (method, path))
+
+    def test_main_listener_still_takes_ingest(self):
+        # Parity: the same request that 404s on the LAN listener works
+        # on the main listener, against the same feed state.
+        feed = load_fixture('feed-basic.json')
+        status, _, body = self.srv.ingest(feed)
+        self.assertEqual(status, 200, body)
+        status, _, body = self.srv.lan_get('/feed.json')
+        self.assertEqual(json.loads(body)['generated_at'],
+                         feed['generated_at'])
+
+    def test_no_password_or_token_appears_in_the_log(self):
+        import base64
+        import io
+        old = sys.stderr
+        sys.stderr = io.StringIO()
+        try:
+            self.srv.lan_get('/', password=H.TEST_PASSWORD)
+            self.srv.lan_ingest(load_fixture('feed-basic.json'),
+                                token=H.TEST_TOKEN)
+            self.srv.get('/', password=H.TEST_PASSWORD)
+        finally:
+            logged = sys.stderr.getvalue()
+            sys.stderr = old
+        self.assertNotIn(H.TEST_PASSWORD, logged)
+        self.assertNotIn(H.TEST_TOKEN, logged)
+        self.assertNotIn(base64.b64encode(
+            ('user:%s' % H.TEST_PASSWORD).encode()).decode(), logged)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=1)

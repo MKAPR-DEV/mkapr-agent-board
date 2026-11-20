@@ -66,7 +66,7 @@ curl -X POST -H 'Content-Type: application/json' \
 python3 -m unittest discover -s tests -v
 ```
 
-91 tests, all passing at v0.1.5:
+111 tests, all passing at v0.1.6:
 
 - service: health, page/feed password (401 without or with a wrong
   password), ingest auth (401 without or with a wrong token), wrong
@@ -109,6 +109,24 @@ python3 -m unittest discover -s tests -v
   scrolls to the task row and opens its detail panel, including when
   the page is opened with that hash; the old `#tasks/<id>` form still
   parses. Map labels and delivery task ids link with it.
+- second listener (v0.1.6): `--lan-bind ADDR` (or `BOARD_LAN_BIND`;
+  the argument wins) starts a second, read-only listener on the same
+  port in the same process, sharing the feed state. It serves only
+  GET/HEAD on `/`, `/feed.json` and `/health`; everything else,
+  including `/ingest` with any method and any token, returns 404
+  before any token code runs. Same page password on `/` and
+  `/feed.json`, `/health` unauthenticated, no password or token ever
+  in the logs. The LAN address must be one IPv4 address, never
+  `0.0.0.0`; empty or unset means no LAN listener, exactly v0.1.5
+  behaviour. A LAN address that cannot bind fails the start (no
+  silent fallback), and `--dev` refuses a non-loopback LAN address.
+  The page now sends `Cache-Control: no-store` (was `no-cache`), so
+  a reverse proxy must not cache a logged-in page. There is no login
+  throttling or lockout, and nothing keys on the client IP, so
+  putting the service behind a proxy changes nothing about login
+  behaviour. The page builds no absolute URLs (only root-relative
+  `/feed.json` and `#` links), so it works behind a proxy that
+  publishes it at `/` on its own hostname.
 - parity (PRD criterion 17): against the real `status.json`, the
   Architecture figures match the Status page's build output exactly
   (same geometry, same status word and colour for all 29 bound ids,
