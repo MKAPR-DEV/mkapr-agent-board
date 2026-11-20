@@ -66,7 +66,7 @@ curl -X POST -H 'Content-Type: application/json' \
 python3 -m unittest discover -s tests -v
 ```
 
-89 tests, all passing at v0.1.4:
+91 tests, all passing at v0.1.5:
 
 - service: health, page/feed password (401 without or with a wrong
   password), ingest auth (401 without or with a wrong token), wrong
@@ -96,10 +96,19 @@ python3 -m unittest discover -s tests -v
   pills at least 44 px tall, table rows 45 px, diagrams/map/tables
   scroll inside their own box, and the map stacks two cards per row
   on tablet, one per row on phone.
-- design A (v0.1.4, Deniel's pick): map cards carry a kind tint
-  (15%) with a 4 px coloured edge and the kind icon in a tinted
-  circle, and a brand badge top-right (C runs on Claude, M on Muse,
-  G on Grok; status and support have no brand assigned).
+- platform theme (v0.1.5, Deniel's pick): map cards carry the
+  platform colour (Claude terracotta #96421f, Muse blue #2c50ad,
+  Grok graphite-teal #115e59) as card tint, 4 px edge, header strip,
+  tinted icon circle and brand badge (C/M/G). Status and Support run
+  on Claude, so they get the Claude badge and colours; Deniel has no
+  platform, so his card stays neutral. The platform comes from a
+  fixed map in the page (the feed does not say it). Every badge
+  letter is 4.5:1 or better on its tint, light and dark mode, checked
+  by a test that reads the colours out of the rendered page.
+- task hash (v0.1.5): `#task=TSK-016` switches to the Tasks tab,
+  scrolls to the task row and opens its detail panel, including when
+  the page is opened with that hash; the old `#tasks/<id>` form still
+  parses. Map labels and delivery task ids link with it.
 - parity (PRD criterion 17): against the real `status.json`, the
   Architecture figures match the Status page's build output exactly
   (same geometry, same status word and colour for all 29 bound ids,

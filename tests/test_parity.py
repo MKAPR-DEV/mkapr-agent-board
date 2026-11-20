@@ -244,7 +244,7 @@ class ParityTests(unittest.TestCase):
                                  TASK[task['state']]))
         delivery = self.page.split('id="tab-delivery"')[1].split('</section>')[0]
         found = re.findall(
-            r'<div class="id"><a href="#tasks/([^"]+)">([^<]+)</a></div>\s*'
+            r'<div class="id"><a href="#task=([^"]+)">([^<]+)</a></div>\s*'
             r'<div class="chg-name">([^<]*)</div><div class="who">([^<]*)</div>'
             r'<div><span class="pill [^"]+">([^<]+)</span></div>',
             delivery)

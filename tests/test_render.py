@@ -15,6 +15,20 @@ import helpers as H
 from helpers import load_fixture
 
 
+def _lum(hexs):
+    """WCAG relative luminance of a #rrggbb colour."""
+    r, g, b = (int(hexs[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    f = lambda c: c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = f(r), f(g), f(b)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _contrast(a, b):
+    """WCAG contrast ratio between two #rrggbb colours."""
+    la, lb = _lum(a), _lum(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+
 class RenderTests(unittest.TestCase):
     def setUp(self):
         self.srv = H.Server(seed=load_fixture('feed-basic.json'))
@@ -82,10 +96,10 @@ class RenderTests(unittest.TestCase):
         page = self._page()
         # muse-ping's label is the task id + the status.json title.
         self.assertIn('TSK-015 Human inbox alert', page)
-        self.assertIn('href="#tasks/TSK-015"', page)
+        self.assertIn('href="#task=TSK-015"', page)
         # An agent with no known task gets a non-clickable "nothing known".
         self.assertIn('nothing known', page)
-        self.assertNotIn('href="#tasks/"', page)
+        self.assertNotIn('href="#task="', page)
         # Label text never comes from message text: the slug of the "Other
         # work" thread must not appear as a map label (it may appear in the
         # Tasks timeline, which is where slugs belong).
@@ -103,8 +117,8 @@ class RenderTests(unittest.TestCase):
 
     def test_delivery_rows_link_to_tasks(self):
         page = self._page()
-        self.assertIn('<a href="#tasks/TSK-012">TSK-012</a>', page)
-        self.assertIn('<a href="#tasks/TSK-015">TSK-015</a>', page)
+        self.assertIn('<a href="#task=TSK-012">TSK-012</a>', page)
+        self.assertIn('<a href="#task=TSK-015">TSK-015</a>', page)
         self.assertIn('Close the KB loop', page)
 
     def test_task_rows_are_keyboard_selectable(self):
@@ -147,21 +161,60 @@ class RenderTests(unittest.TestCase):
         self.assertIn('.map-scroll { overflow-x: auto;', page)
         self.assertIn('.table-scroll { overflow-x: auto;', page)
 
-    def test_design_a_kind_colours_and_brand_badges(self):
+    def test_platform_theme_and_brand_badges(self):
         page = self._page()
-        # v0.1.4 Design A: kind tint + 4px edge, stronger than the mock.
-        self.assertIn('.map-card.k-session { background: rgba(22,111,67,0.15); border-left: 4px solid var(--live); }', page)
-        # Kind icon in a tinted circle, coloured, not muted grey.
-        self.assertIn('.map-card.k-person .kicon { background: rgba(44,80,173,0.20); color: var(--built); }', page)
-        # Brand badges top-right: 2 Claude, 4 Muse, 1 Grok; none for
-        # deniel, status or support.
-        self.assertEqual(page.count('class="brand brand-claude"'), 2)
+        # v0.1.5: card accent follows the platform, not the kind: tint +
+        # 4px edge + header strip + tinted icon circle + badge.
+        self.assertIn('.map-card.p-claude { background: rgba(150,66,31,0.12); border-left: 4px solid var(--claude); }', page)
+        self.assertIn('.map-card.p-grok .who { background: rgba(17,94,89,0.18); margin: -10px -12px 0; padding: 10px 12px; border-radius: 8px 8px 0 0; }', page)
+        self.assertIn('.map-card.p-muse .kicon { background: rgba(44,80,173,0.20); color: var(--muse); }', page)
+        # Brand badges top-right: 4 Claude (archie, operations, status,
+        # support), 4 Muse, 1 Grok; deniel has none.
+        self.assertEqual(page.count('class="brand brand-claude"'), 4)
         self.assertEqual(page.count('class="brand brand-muse"'), 4)
         self.assertEqual(page.count('class="brand brand-grok"'), 1)
-        self.assertEqual(page.count('class="brand '), 7)
-        # Tablet: two cards per row, no sideways scroll; phone: one.
-        self.assertIn('.map-row { display: grid; grid-template-columns: 1fr 1fr; }', page)
+        self.assertEqual(page.count('class="brand '), 9)
+        self.assertIn('class="map-card p-claude"', page)
+        self.assertIn('class="map-card p-grok"', page)
+        # Tablet: auto-fill ~320px columns, so cards never take the whole
+        # width; phone stays one column.
+        self.assertIn('.map-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }', page)
         self.assertIn('.map-inner { min-width: 0; }', page)
+
+    def test_task_hash_opens_detail(self):
+        page = self._page()
+        # v0.1.5: #task=TSK-016 switches to the Tasks tab, scrolls to the
+        # row and opens its detail; the old #tasks/<id> form still parses.
+        self.assertIn("if (h.indexOf('task=') === 0) return { tab: 'tasks', task: h.slice(5) };", page)
+        self.assertIn("if (tab === 'tasks' && task) { selectTask(task); scrollToTask(task); }", page)
+        self.assertIn('tr.scrollIntoView({ block: \'nearest\' })', page)
+        self.assertIn("var parts = h.split('/');", page)
+
+    def test_platform_badge_contrast(self):
+        # v0.1.5: every badge letter is 4.5:1 or better on its tint, in
+        # light mode (white surface) and dark mode (#161f28 surface).
+        # Colours are read out of the rendered page, not restated here.
+        page = self._page()
+        for brand in ('claude', 'muse', 'grok'):
+            m = re.search(
+                r'\.brand-%s \{ background: rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\); '
+                r'color: var\(--(\w+)\); \}' % brand, page)
+            self.assertIsNotNone(m, brand)
+            r, g, b, alpha, var = int(m.group(1)), int(m.group(2)), int(m.group(3)), float(m.group(4)), m.group(5)
+            light = re.search(r'--%s: (#[0-9a-f]{6});' % var, page).group(1)
+            dark_part = page.split('prefers-color-scheme: dark')[1]
+            dark = re.search(r'--%s: (#[0-9a-f]{6});' % var, dark_part).group(1)
+            for surface, text in (((255, 255, 255), light), ((22, 31, 40), dark)):
+                bg = tuple(round(alpha * c + (1 - alpha) * s) for c, s in zip((r, g, b), surface))
+                bg_hex = '#%02x%02x%02x' % bg
+                ratio = _contrast(text, bg_hex)
+                self.assertGreaterEqual(ratio, 4.5, '%s %s on %s: %.2f' % (brand, text, bg_hex, ratio))
+        # Grok is graphite-teal, clearly different from Muse blue, not black.
+        grok = re.search(r'--grok: (#[0-9a-f]{6});', page).group(1)
+        muse = re.search(r'--muse: (#[0-9a-f]{6});', page).group(1)
+        self.assertEqual(grok, '#115e59')
+        self.assertNotEqual(grok, muse)
+        self.assertGreater(_lum(grok), 0.05)
 
     def test_what_changed_panel_uses_the_status_key(self):
         page = self._page()

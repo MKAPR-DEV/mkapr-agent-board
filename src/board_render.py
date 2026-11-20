@@ -41,17 +41,23 @@ STAGE_LABEL = {'design': 'Design', 'QC': 'QC', 'build': 'Build',
 
 # Map-kind icons: small inline SVG marks, no external images. The key under
 # the map explains them (PRD section 8.1).
-# Design A (v0.1.4, Deniel's pick): kind colours for the map cards, made
-# to pop a little more than the proposal mock — 15% tint, 4px edge,
-# icon in a 20% tinted circle. The edge and icon use the board's own
-# palette variables, so they adapt to dark mode; the state word and
-# dot keep their own colours. The kind word in .where stays muted.
+# v0.1.5: card accent follows the platform theme, not the kind.
+# Claude terracotta, Muse blue, Grok graphite-teal (#115e59, not
+# black). Accent = card tint + 4px edge + header strip + icon circle
+# + badge. State colours stay separate; every state keeps its word
+# plus colour. Badge text is 4.5:1 or better on its tint, light and
+# dark mode (see test_platform_badge_contrast).
 MAP_KINDS = ('person', 'session', 'scheduled', 'manual')
 # Which AI runs each agent, shown as a letter badge top-right of the
-# map card. Status and support have no brand assigned, so no badge.
+# map card and as the card's platform theme. The feed does not say
+# which platform an agent runs on, so this fixed map is the source;
+# tell Archie the map when it changes. Deniel has no platform, so
+# his card stays neutral with no badge.
 BRAND_BY_ID = {
     'archie': ('claude', 'C'),
     'operations': ('claude', 'C'),
+    'status': ('claude', 'C'),
+    'support': ('claude', 'C'),
     'grok': ('grok', 'G'),
     'muse-ping': ('muse', 'M'),
     'muse-kb': ('muse', 'M'),
@@ -247,6 +253,7 @@ CSS = """
   --bg: #f2f4f6; --surface: #ffffff; --soft: #e8ecf0; --ink: #15202a; --muted: #55636f; --line: #cfd7de;
   --accent: #0d5f7d; --arrow: #55636f;
   --live: #166f43; --partial: #8f5400; --built: #2c50ad; --design: #6f42a3; --parked: #66717c; --unknown: #a3361f;
+  --claude: #96421f; --muse: #2c50ad; --grok: #115e59;
   --danger: #a3361f; --amber-bg: #fdf3e0;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
@@ -257,6 +264,7 @@ CSS = """
     --bg: #0e141a; --surface: #161f28; --soft: #1e2933; --ink: #e3e9ef; --muted: #9ba8b5; --line: #2c3945;
     --accent: #63c2e1; --arrow: #9ba8b5;
     --live: #55c992; --partial: #e3a846; --built: #93abff; --design: #c3a6ee; --parked: #909ca9; --unknown: #f29380;
+    --claude: #e8a583; --muse: #93abff; --grok: #5eead4;
     --danger: #f29380; --amber-bg: #3a2f16;
     color-scheme: dark;
   }
@@ -374,24 +382,25 @@ nav.tabs a:hover { color: var(--ink); }
 .map-row { display: flex; gap: 10px; align-items: stretch; }
 .map-card { flex: 1 1 0; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: var(--surface); }
 .map-card.not-created { border-style: dashed; opacity: 0.75; }
-/* Design A: kind tint + coloured edge + tinted icon circle. */
-.map-card.k-person { background: rgba(44,80,173,0.15); border-left: 4px solid var(--built); }
-.map-card.k-session { background: rgba(22,111,67,0.15); border-left: 4px solid var(--live); }
-.map-card.k-scheduled { background: rgba(111,66,163,0.15); border-left: 4px solid var(--design); }
-.map-card.k-manual { background: rgba(143,84,0,0.15); border-left: 4px solid var(--partial); }
+/* v0.1.5: platform theme accent (see the comment above BRAND_BY_ID). */
+.map-card.p-claude { background: rgba(150,66,31,0.12); border-left: 4px solid var(--claude); }
+.map-card.p-muse { background: rgba(44,80,173,0.12); border-left: 4px solid var(--muse); }
+.map-card.p-grok { background: rgba(17,94,89,0.12); border-left: 4px solid var(--grok); }
 .map-card .who { display: flex; gap: 8px; align-items: center; }
+.map-card.p-claude .who { background: rgba(150,66,31,0.18); margin: -10px -12px 0; padding: 10px 12px; border-radius: 8px 8px 0 0; }
+.map-card.p-muse .who { background: rgba(44,80,173,0.18); margin: -10px -12px 0; padding: 10px 12px; border-radius: 8px 8px 0 0; }
+.map-card.p-grok .who { background: rgba(17,94,89,0.18); margin: -10px -12px 0; padding: 10px 12px; border-radius: 8px 8px 0 0; }
 .map-card .who svg { flex: none; }
 .map-card .kicon { flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--muted); }
-.map-card.k-person .kicon { background: rgba(44,80,173,0.20); color: var(--built); }
-.map-card.k-session .kicon { background: rgba(22,111,67,0.20); color: var(--live); }
-.map-card.k-scheduled .kicon { background: rgba(111,66,163,0.20); color: var(--design); }
-.map-card.k-manual .kicon { background: rgba(143,84,0,0.20); color: var(--partial); }
+.map-card.p-claude .kicon { background: rgba(150,66,31,0.20); color: var(--claude); }
+.map-card.p-muse .kicon { background: rgba(44,80,173,0.20); color: var(--muse); }
+.map-card.p-grok .kicon { background: rgba(17,94,89,0.20); color: var(--grok); }
 .map-card .nm { font-weight: 700; font-size: 14px; flex: 1 1 auto; }
 /* Brand badge, top-right of the card: which AI runs this agent. */
 .brand { flex: none; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
-.brand-claude { background: rgba(201,111,74,0.18); color: #c96f4a; }
-.brand-muse { background: rgba(44,80,173,0.16); color: var(--built); }
-.brand-grok { background: var(--soft); color: var(--ink); }
+.brand-claude { background: rgba(150,66,31,0.18); color: var(--claude); }
+.brand-muse { background: rgba(44,80,173,0.16); color: var(--muse); }
+.brand-grok { background: rgba(17,94,89,0.16); color: var(--grok); }
 .map-card .where { color: var(--muted); font-size: 12.5px; }
 .map-state { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; }
 .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
@@ -437,7 +446,7 @@ table.board td.id, table.board th.id { font: 12.5px var(--mono); }
 @media (max-width: 900px) {
   .tasks-layout { grid-template-columns: minmax(0, 1fr); }
   .map-inner { min-width: 0; }
-  .map-row { display: grid; grid-template-columns: 1fr 1fr; }
+  .map-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
   .map-delegate { grid-column: 1 / -1; }
 }
 @media (max-width: 720px) {
@@ -707,12 +716,11 @@ def render_map(feed, agents, tasks_by_id, now):
         elif word == 'needs a ping' and detail:
             state_txt = 'needs a ping (%s)' % detail
         icon = KIND_ICON.get(agent.get('kind'), KIND_ICON['manual'])
-        kind = agent.get('kind') or ''
-        kind_cls = (' k-' + kind) if kind in MAP_KINDS else ''
         brand = BRAND_BY_ID.get(aid)
+        plat_cls = (' p-' + brand[0]) if brand else ''
         brand_html = ('<span class="brand brand-%s" title="Runs on %s">%s</span>'
                       % (brand[0], BRAND_NAME[brand[0]], brand[1])) if brand else ''
-        out = ['<div class="map-card%s%s">' % (' not-created' if word == 'not created' else '', kind_cls)]
+        out = ['<div class="map-card%s%s">' % (' not-created' if word == 'not created' else '', plat_cls)]
         out.append('<div class="who"><span class="kicon">%s</span><span class="nm">%s</span>%s</div>'
                    % (icon, E(aid), brand_html))
         out.append('<div class="where">%s · %s</div>' % (E(KIND_WORD.get(agent.get('kind'), 'agent')),
@@ -722,7 +730,7 @@ def render_map(feed, agents, tasks_by_id, now):
         out.append('<div><span class="%s" title="Messages waiting for this agent">%s</span></div>' % (chip_cls, E(chip_txt)))
         if label:
             task_id = label.split(' ', 1)[0]
-            out.append('<a class="map-label" href="#tasks/%s">%s</a>' % (E(task_id), E(label)))
+            out.append('<a class="map-label" href="#task=%s">%s</a>' % (E(task_id), E(label)))
         else:
             out.append('<span class="map-label unknown">nothing known</span>')
         out.append('</div>')
@@ -875,7 +883,7 @@ def render_delivery(status_json):
                     continue
                 key = '%s|%s' % (task.get('id'), task.get('title'))
                 out.append('<div class="row task" data-chg-map="tasks" data-chg-key="%s">'
-                           '<div class="id"><a href="#tasks/%s">%s</a></div>'
+                           '<div class="id"><a href="#task=%s">%s</a></div>'
                            '<div class="chg-name">%s</div><div class="who">%s</div><div>%s</div></div>'
                            % (_esc_attr(key), _esc_attr(task.get('id')), E(task.get('id')),
                               E(task.get('title')), E(task.get('owner')), task_pill(task.get('state'))))
@@ -1127,6 +1135,7 @@ BOARD_JS = """
   var TABS = ['map', 'arch', 'delivery', 'agents', 'tasks', 'feed'];
   function parseHash() {
     var h = location.hash.replace(/^#/, '');
+    if (h.indexOf('task=') === 0) return { tab: 'tasks', task: h.slice(5) };
     var parts = h.split('/');
     var tab = parts[0] || 'map';
     if (TABS.indexOf(tab) === -1) tab = 'map';
@@ -1141,6 +1150,12 @@ BOARD_JS = """
       d.hidden = d.getAttribute('data-task-detail') !== id;
     });
   }
+  function scrollToTask(id) {
+    var rows = document.querySelectorAll('tr[data-task]');
+    rows.forEach(function (tr) {
+      if (tr.getAttribute('data-task') === id) tr.scrollIntoView({ block: 'nearest' });
+    });
+  }
   function showTab(tab, task) {
     TABS.forEach(function (t) {
       var sec = document.getElementById('tab-' + t);
@@ -1148,20 +1163,20 @@ BOARD_JS = """
       var link = document.querySelector('nav.tabs a[href="#' + t + '"]');
       if (link) link.setAttribute('aria-selected', t === tab ? 'true' : 'false');
     });
-    if (tab === 'tasks' && task) selectTask(task);
+    if (tab === 'tasks' && task) { selectTask(task); scrollToTask(task); }
   }
   function applyHash() { var h = parseHash(); showTab(h.tab, h.task); }
   window.addEventListener('hashchange', applyHash);
   document.querySelectorAll('tr[data-task]').forEach(function (tr) {
     tr.addEventListener('click', function () {
       var id = tr.getAttribute('data-task');
-      if (location.hash === '#tasks/' + id) selectTask(id);
-      else location.hash = '#tasks/' + id;
+      if (location.hash === '#task=' + id) selectTask(id);
+      else location.hash = '#task=' + id;
     });
     tr.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        location.hash = '#tasks/' + tr.getAttribute('data-task');
+        location.hash = '#task=' + tr.getAttribute('data-task');
       }
     });
   });
