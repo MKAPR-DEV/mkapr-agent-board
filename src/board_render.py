@@ -224,35 +224,52 @@ def doing_label(agent_id, feed, tasks_by_id):
     return None
 
 
-def need_deniel_items(feed, status_json):
-    """Items for the red 'N items need Deniel' strip: (kind, text, task).
+def need_deniel_items(feed, tasks_by_id, status_json):
+    """Items for the red 'N items need Deniel' strip: (label, text, task).
 
-    Sources: inbox/human entries, decision/halt actions in threads, and the
-    status.json attention list. Slug and action only, never message text.
+    Only open things count: a human-inbox entry, a decision/halt thread
+    whose state is not CLOSED or ANSWERED, a status.json task with
+    ``ball_with`` == 'deniel' that is not closed, and the status.json
+    attention lines in full. The label is plain ('Decision',
+    'Waiting on you', 'Attention'); the text is the slug or the task
+    title, never prefixed with the action, so the label cannot double
+    it. The task id is rendered as a link by the caller. Slug and
+    action only, never message text.
     """
     items = []
     for entry in feed.get('human_inbox') or []:
         if not isinstance(entry, dict):
             continue
-        items.append(('human inbox',
-                      '%s: %s' % (entry.get('action') or 'message',
-                                  entry.get('slug') or '(no slug)'),
+        action = str(entry.get('action') or '')
+        label = 'Decision' if action in ('decision', 'halt') else 'Waiting on you'
+        items.append((label,
+                      entry.get('slug') or '(no slug)',
                       entry.get('task') or ''))
     for thread in feed.get('threads') or []:
         if not isinstance(thread, dict):
             continue
+        if _thread_state_word(thread) in ('CLOSED', 'ANSWERED'):
+            continue
         for msg in thread.get('messages') or []:
             if str(msg.get('action') or '') in ('decision', 'halt'):
-                items.append((msg.get('action'),
-                              '%s: %s' % (msg.get('action'),
-                                          thread.get('slug') or thread.get('thread_id') or ''),
+                items.append(('Decision',
+                              thread.get('slug') or thread.get('thread_id') or '',
                               thread.get('task') or ''))
                 break
+    for task in (tasks_by_id or {}).values():
+        if not isinstance(task, dict):
+            continue
+        if task.get('ball_with') != 'deniel':
+            continue
+        if task.get('state') == 'done' or task.get('stage') == 'done':
+            continue
+        items.append(('Waiting on you',
+                      (task.get('title') or '').strip(),
+                      task.get('id') or ''))
     for line in (status_json or {}).get('attention') or []:
         text = str(line or '')
         if text:
-            short = text if len(text) <= 60 else text[:59].rstrip(' ,;:') + '…'
-            items.append(('attention', short, ''))
+            items.append(('Attention', text, ''))
     return items
 
 CSS = """
@@ -308,8 +325,14 @@ button:focus-visible, a:focus-visible, tr:focus-visible { outline: 2px solid var
 .banner.red strong { color: var(--danger); }
 .need-strip { border: 1px solid var(--danger); border-radius: 6px; padding: 10px 14px; background: var(--surface); color: var(--ink); font-size: 14px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
 .need-strip strong { color: var(--danger); }
-.need-strip ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.need-strip ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; flex: 1 1 100%; }
 .need-strip li { font-size: 13.5px; }
+/* v0.1.8: state filter above the Tasks table, column filters above the
+   Feed table. Labels wrap on a phone; inputs keep a 44 px touch target. */
+.task-filters, .feed-filters { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 10px; }
+.task-filters label, .feed-filters label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+.task-filters input, .feed-filters input { min-height: 44px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font-size: 14px; }
+.task-filters input[type="checkbox"] { min-height: 22px; width: 22px; }
 .pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 650; letter-spacing: 0.02em; white-space: nowrap; color: var(--c); }
 .pill::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
 .s-live { --c: var(--live); } .s-partial { --c: var(--partial); } .s-built { --c: var(--built); }
@@ -637,7 +660,7 @@ def _state_label(thread, now):
     return state
 
 
-def render_header(feed, status_json, status_stale, status_as_of, now):
+def render_header(feed, tasks_by_id, status_json, status_stale, status_as_of, now):
     """The always-visible header: title, score, meta, banners, Needs strip."""
     generated = parse_time(feed.get('generated_at'))
     now_dt = now or datetime.now(WIB)
@@ -645,7 +668,7 @@ def render_header(feed, status_json, status_stale, status_as_of, now):
     stale = feed_is_stale(feed.get('generated_at'), now_dt)
     no_feed = not feed.get('generated_at')
     pct, live, partial, total, detail = parts_score(status_json)
-    items = need_deniel_items(feed, status_json)
+    items = need_deniel_items(feed, tasks_by_id, status_json)
 
     out = ['<header>']
     out.append('<div class="hd-top"><div class="hd-main">')
@@ -683,10 +706,24 @@ def render_header(feed, status_json, status_stale, status_as_of, now):
     else:
         out.append('<div class="banner red" id="feed-banner" role="alert" hidden><strong>Feed stopped.</strong> What you see is old.</div>')
     if items:
-        out.append('<div class="need-strip" role="alert"><strong>%d items need Deniel</strong><ul>' % len(items))
-        for kind, text, _task in items[:2]:
-            out.append('<li>%s: %s</li>' % (E(kind), E(text)))
-        out.append('</ul><a class="btn" href="#feed">Open</a></div>')
+        # v0.1.8: the strip shows the count and an Open button; the button
+        # reveals the full list (every item, each on its own line, full
+        # text). Nothing is cut to two, and the list is in the page, so a
+        # phone user who opens it sees all of it.
+        out.append('<div class="need-strip" role="alert"><strong>%d items need Deniel</strong> ' % len(items))
+        out.append('<button type="button" id="need-toggle" aria-expanded="false" aria-controls="need-list">Open</button>')
+        out.append('<ul id="need-list" hidden>')
+        for label, text, task in items:
+            bits = []
+            if task:
+                if task in (tasks_by_id or {}):
+                    bits.append('<a href="#task=%s">%s</a>' % (_esc_attr(task), E(task)))
+                else:
+                    bits.append(E(task))
+            if text:
+                bits.append(E(text))
+            out.append('<li><strong>%s</strong> %s</li>' % (E(label), ' '.join(bits)))
+        out.append('</ul></div>')
     out.append('</header>')
     return '\n'.join(out)
 
@@ -980,71 +1017,165 @@ def _next_text(thread, tasks_by_id):
     return '—'
 
 
+def _task_state_key(task):
+    """A task's state as a filter key: one of pending, in_progress,
+    blocked, done, not_started. Unknown or missing reads as pending,
+    the same fallback the Delivery tab's state pill uses."""
+    s = str((task or {}).get('state') or '')
+    return s if s in TASK_STATE else 'pending'
+
+
+def _filter_states(box):
+    """Task states a Tasks-tab filter box shows. 'Scheduled' covers
+    pending and not_started alike: both mean "not started yet"."""
+    return {'in_progress': ('in_progress',),
+            'pending': ('pending', 'not_started'),
+            'blocked': ('blocked',),
+            'done': ('done',)}.get(box, ())
+
+
+# The Tasks filter's default: in progress, scheduled and blocked are
+# shown; done tasks are hidden until the Done box is ticked.
+DEFAULT_TASK_FILTER = ('in_progress', 'pending', 'blocked')
+
+
 def render_tasks(feed, status_json, tasks_by_id, now):
-    """Tab 5, Tasks: open tasks on the left, task detail on the right."""
+    """Tab 5, Tasks: one row per delivery task, task detail on the right.
+
+    v0.1.8: rows come from status.json delivery tasks, not from threads
+    (v0.1.7's thread-only rows hid tasks with no open thread, so Deniel
+    saw one open task). A task with no thread still gets its row; its
+    detail panel says "no threads". Threads whose task is not in
+    status.json keep a row too (unknown task, always shown), as does a
+    doing_task an agent's card links to with neither a thread nor a
+    status record; threads with no task id keep the "Other work" row
+    at the end.
+    """
     groups, order = _task_threads(feed)
-    # Open means a thread whose state is not CLOSED or ANSWERED: the same
-    # open definition the Live map uses. A task with no open thread gets
-    # no row; its threads still show in its detail panel.
-    open_tasks = []
-    for key in order:
-        threads = groups[key]
-        open_ts = [t for t in threads
-                   if _thread_state_word(t) not in ('CLOSED', 'ANSWERED')]
-        if open_ts:
-            open_tasks.append((key, threads, open_ts))
     has_progress = any(_thread_state_word(t) == 'IN_PROGRESS'
                        for t in feed.get('threads') or [])
-    default_task = open_tasks[0][0] if open_tasks else ''
+    # One row per delivery task in status.json order, then any thread
+    # task id not in status.json (first-appearance order), then any
+    # doing_task an agent's card links to (a card label can name a task
+    # with neither a thread nor a status record, e.g. TSK-016 on
+    # Archie's card), then Other work for threads with no task id.
+    rows = []
+    for tid, task in (tasks_by_id or {}).items():
+        threads = groups.get(tid) or []
+        open_ts = [t for t in threads
+                   if _thread_state_word(t) not in ('CLOSED', 'ANSWERED')]
+        rows.append((tid, task, threads, open_ts))
+    seen = set(tasks_by_id or {})
+    for key in order:
+        if key and key not in seen:
+            threads = groups[key]
+            open_ts = [t for t in threads
+                       if _thread_state_word(t) not in ('CLOSED', 'ANSWERED')]
+            rows.append((key, {}, threads, open_ts))
+            seen.add(key)
+    for agent in feed.get('agents') or []:
+        if not isinstance(agent, dict):
+            continue
+        dt = agent.get('doing_task') or ''
+        if dt and dt not in seen:
+            rows.append((dt, {}, [], []))
+            seen.add(dt)
+    if '' in groups:
+        threads = groups['']
+        open_ts = [t for t in threads
+                   if _thread_state_word(t) not in ('CLOSED', 'ANSWERED')]
+        rows.append(('', {}, threads, open_ts))
+    default_states = set()
+    for box in DEFAULT_TASK_FILTER:
+        default_states.update(_filter_states(box))
+    default_task = ''
+    for tid, task, _threads, _open in rows:
+        if tid and tid in (tasks_by_id or {}) \
+                and _task_state_key(task) in default_states:
+            default_task = tid
+            break
+    if not default_task and rows:
+        default_task = rows[0][0]
     out = ['<section aria-labelledby="h-tasks" id="tab-tasks" role="tabpanel" hidden>',
            '<div class="sec-head"><h2 id="h-tasks">Tasks</h2>',
            '<p class="lede">One row per task. Select a row to see the task detail and its threads. '
+           'Filter by state; done tasks are hidden by default. '
            'A missing field says "not recorded" &mdash; the page never invents one.</p></div>']
     if not has_progress:
         out.append('<p class="note">In progress is not recorded &mdash; no started marker was seen in this feed.</p>')
+    out.append('<div class="task-filters" role="group" aria-label="Filter tasks by state">'
+               '<label><input type="checkbox" id="flt-all"> All</label>'
+               '<label><input type="checkbox" class="flt-state" value="in_progress" checked> In progress</label>'
+               '<label><input type="checkbox" class="flt-state" value="pending" checked> Scheduled (pending)</label>'
+               '<label><input type="checkbox" class="flt-state" value="blocked" checked> Blocked</label>'
+               '<label><input type="checkbox" class="flt-state" value="done"> Done</label></div>')
     out.append('<div class="tasks-layout"><div>')
     out.append('<div class="table-scroll"><table class="board"><thead><tr>'
                '<th>What</th><th>Who has the ball</th><th>Where</th><th>Since</th><th>State</th><th>Next</th>'
                '</tr></thead><tbody>')
-    for key, threads, open_ts in open_tasks:
-        task = tasks_by_id.get(key) or {}
-        if key:
+    for tid, task, threads, open_ts in rows:
+        known = tid in (tasks_by_id or {})
+        if tid:
             title = task.get('title') or ''
-            what = '%s %s' % (key, title) if title else key
+            what = '%s %s' % (tid, title) if title else tid
+            if threads:
+                what = '%s (%d thread%s, %d open)' % (
+                    what, len(threads),
+                    '' if len(threads) == 1 else 's', len(open_ts))
+            else:
+                what = '%s (no threads)' % what
         else:
-            what = 'Other work'
-        count = '%d thread%s, %d open' % (
-            len(threads), '' if len(threads) == 1 else 's', len(open_ts))
-        what = '%s (%s)' % (what, count)
+            what = 'Other work (%d thread%s, %d open)' % (
+                len(threads), '' if len(threads) == 1 else 's', len(open_ts))
         # The row shows the oldest open thread (the longest wait); the
-        # count covers the rest.
-        dated = [t for t in open_ts if t.get('since')]
-        oldest = (min(dated, key=lambda t: str(t.get('since')))
-                  if dated else open_ts[0])
-        since = parse_time(oldest.get('since'))
-        out.append('<tr data-task="%s" tabindex="0"><td><strong>%s</strong></td><td>%s</td><td>%s</td>'
+        # ball falls back to it when the task record has none.
+        ball = (task.get('ball_with') or '') if tid else ''
+        where = ''
+        since = None
+        oldest = None
+        if open_ts:
+            dated = [t for t in open_ts if t.get('since')]
+            oldest = (min(dated, key=lambda t: str(t.get('since')))
+                      if dated else open_ts[0])
+            if not ball:
+                ball = oldest.get('ball_with') or ''
+            where = oldest.get('where') or ''
+            since = parse_time(oldest.get('since'))
+        if known:
+            state_key = _task_state_key(task)
+            state_attr = ' data-state="%s"' % state_key
+            state_label = E(TASK_STATE[state_key])
+        else:
+            # No task record: no state to filter on, so the state filter
+            # never hides this row.
+            state_attr = ''
+            state_label = '—'
+        if open_ts:
+            next_text = _next_text(oldest, tasks_by_id)
+        else:
+            next_text = (task.get('waiting_on') or '—') if tid else '—'
+        out.append('<tr data-task="%s"%s tabindex="0"><td><strong>%s</strong></td><td>%s</td><td>%s</td>'
                    '<td>%s</td><td>%s</td><td>%s</td></tr>'
-                   % (_esc_attr(key), E(what), E(oldest.get('ball_with') or ''),
-                      E(oldest.get('where') or ''),
+                   % (_esc_attr(tid), state_attr, E(what), E(ball),
+                      E(where),
                       E(fmt_hm(since)) if since else '—',
-                      E(_state_label(oldest, now)), E(_next_text(oldest, tasks_by_id))))
-    if not open_tasks:
-        out.append('<tr><td colspan="6">No open tasks in this feed.</td></tr>')
+                      state_label, E(next_text)))
+    if not rows:
+        out.append('<tr><td colspan="6">No tasks in this feed.</td></tr>')
+    out.append('<tr id="tasks-no-match" hidden><td colspan="6">No tasks match the selected states.</td></tr>')
     out.append('</tbody></table></div></div>')
     out.append('<div id="task-details">')
-    for key in order:
-        threads = groups[key]
-        task = tasks_by_id.get(key) or {}
+    for tid, task, threads, open_ts in rows:
         title = task.get('title') or ''
         owner = task.get('owner') or ''
         stage = task.get('stage') or ''
         summary = task.get('summary') or ''
         waiting_on = task.get('waiting_on') or ''
-        hidden = '' if key == default_task else ' hidden'
-        out.append('<div class="detail" data-task-detail="%s"%s>' % (_esc_attr(key), hidden))
-        out.append('<h3>%s</h3>' % E('%s %s' % (key, title) if key else 'Other work'))
+        hidden = '' if tid == default_task else ' hidden'
+        out.append('<div class="detail" data-task-detail="%s"%s>' % (_esc_attr(tid), hidden))
+        out.append('<h3>%s</h3>' % E('%s %s' % (tid, title) if tid else 'Other work'))
         out.append('<dl>')
-        out.append('<dt>Task id</dt><dd>%s</dd>' % (E(key) if key else 'not recorded'))
+        out.append('<dt>Task id</dt><dd>%s</dd>' % (E(tid) if tid else 'not recorded'))
         out.append('<dt>Title</dt><dd>%s</dd>' % (E(title) if title else 'not recorded'))
         out.append('<dt>Owner</dt><dd>%s</dd>' % (E(owner) if owner else 'not recorded'))
         boxes = []
@@ -1055,16 +1186,29 @@ def render_tasks(feed, status_json, tasks_by_id, now):
         out.append('<dt>What it is about</dt><dd>%s</dd>' % (E(summary) if summary else 'not recorded'))
         out.append('<dt>Waiting on</dt><dd>%s</dd>' % (E(waiting_on) if waiting_on else 'not recorded'))
         out.append('</dl>')
-        out.append('<h3>Threads</h3><ul class="timeline">')
-        for thread in threads:
-            ts = parse_time(thread.get('since'))
-            out.append('<li><span class="tm">%s</span><span>%s</span><span>%s</span><span>%s</span><span>%s</span></li>'
-                       % (E(fmt_hm(ts)) if ts else '—',
-                          E(thread.get('slug') or thread.get('thread_id') or ''),
-                          E(_state_label(thread, now)),
-                          E(thread.get('ball_with') or ''),
-                          E(thread.get('where') or '')))
-        out.append('</ul>')
+        # v0.1.8: the newest 5 threads first; the rest hide behind a
+        # "Show all N threads" control.
+        out.append('<h3>Threads</h3>')
+        if not threads:
+            out.append('<p class="note">no threads</p>')
+        else:
+            ordered = sorted(threads, key=lambda t: str(t.get('since') or ''),
+                             reverse=True)
+            out.append('<ul class="timeline">')
+            for i, thread in enumerate(ordered):
+                extra = ' class="extra-thread" hidden' if i >= 5 else ''
+                ts = parse_time(thread.get('since'))
+                out.append('<li%s><span class="tm">%s</span><span>%s</span><span>%s</span><span>%s</span><span>%s</span></li>'
+                           % (extra,
+                              E(fmt_hm(ts)) if ts else '—',
+                              E(thread.get('slug') or thread.get('thread_id') or ''),
+                              E(_state_label(thread, now)),
+                              E(thread.get('ball_with') or ''),
+                              E(thread.get('where') or '')))
+            out.append('</ul>')
+            if len(ordered) > 5:
+                out.append('<button type="button" class="show-all-threads" data-threads="%d" aria-expanded="false">Show all %d threads</button>'
+                           % (len(ordered), len(ordered)))
         msgs = []
         for thread in threads:
             for msg in thread.get('messages') or []:
@@ -1079,7 +1223,7 @@ def render_tasks(feed, status_json, tasks_by_id, now):
                           E(msg.get('action') or ''), E(msg.get('slug') or '')))
         out.append('</ul>')
         related = [r for r in feed.get('reports') or []
-                   if isinstance(r, dict) and key and key in str(r.get('topic') or '')]
+                   if isinstance(r, dict) and tid and tid in str(r.get('topic') or '')]
         out.append('<h3>Latest Reports files</h3>')
         if related:
             out.append('<ul class="timeline">')
@@ -1093,8 +1237,8 @@ def render_tasks(feed, status_json, tasks_by_id, now):
         else:
             out.append('<p class="note">not recorded</p>')
         out.append('</div>')
-    if not order:
-        out.append('<div class="detail"><p class="note">No threads in this feed.</p></div>')
+    if not rows:
+        out.append('<div class="detail"><p class="note">No tasks in this feed.</p></div>')
     out.append('</div></div>')
     unreadable = feed.get('unreadable') or []
     if unreadable:
@@ -1139,24 +1283,51 @@ def feed_events(feed, limit=50):
     return events[:limit]
 
 
+def _feed_time_key(value):
+    """An event time as 'YYYY-MM-DDTHH:MM' in WIB, for the time-range
+    filter: the same shape a datetime-local input returns, so the two
+    compare as strings. '' when the event has no usable time."""
+    dt = parse_time(value)
+    if dt is None:
+        return ''
+    return dt.astimezone(WIB).strftime('%Y-%m-%dT%H:%M')
+
+
 def render_feed_tab(feed):
-    """Tab 6, Feed: newest 50 events. No message text, ever."""
+    """Tab 6, Feed: newest 50 events. No message text, ever.
+
+    v0.1.8: one filter per column (time range, from, to, action, task),
+    client-side, on data attributes carried by each row.
+    """
     events = feed_events(feed)
     out = ['<section aria-labelledby="h-feed" id="tab-feed" role="tabpanel" hidden>',
            '<div class="sec-head"><h2 id="h-feed">Feed</h2>',
-           '<p class="lede">Newest %d events from the bus and Reports. Time, who wrote to whom, action, slug, task &mdash; no message text.</p></div>' % len(events),
-           '<div class="table-scroll"><table class="board"><thead><tr>'
+           '<p class="lede">Newest %d events from the bus and Reports. Time, who wrote to whom, action, slug, task &mdash; no message text. '
+           'Filter by time range, sender, action or task below.</p></div>' % len(events),
+           '<div class="feed-filters" role="group" aria-label="Filter feed events">'
+           '<label>Time from <input type="datetime-local" id="flt-time-from" aria-label="Show events from this time"></label>'
+           '<label>to <input type="datetime-local" id="flt-time-to" aria-label="Show events up to this time"></label>'
+           '<label>From <input type="search" id="flt-from" placeholder="From" aria-label="Filter by sender"></label>'
+           '<label>To <input type="search" id="flt-to" placeholder="To" aria-label="Filter by recipient"></label>'
+           '<label>Action <input type="search" id="flt-action" placeholder="Action" aria-label="Filter by action"></label>'
+           '<label>Task <input type="search" id="flt-task" placeholder="Task" aria-label="Filter by task"></label>'
+           '<button type="button" id="flt-clear">Clear filters</button></div>',
+           '<div class="table-scroll"><table class="board" id="feed-table"><thead><tr>'
            '<th>Time</th><th>From</th><th>To</th><th>Action</th><th>Slug</th><th>Task</th>'
            '</tr></thead><tbody>']
     for ev in events:
         et = parse_time(ev.get('time'))
-        out.append('<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>'
-                   % (E(fmt_hm(et)) if et else '—',
+        out.append('<tr data-time="%s" data-from="%s" data-to="%s" data-action="%s" data-task="%s"><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>'
+                   % (_esc_attr(_feed_time_key(ev.get('time'))),
+                      _esc_attr(ev.get('from') or ''), _esc_attr(ev.get('to') or ''),
+                      _esc_attr(ev.get('kind') or ''), _esc_attr(ev.get('task') or ''),
+                      E(fmt_hm(et)) if et else '—',
                       E(ev.get('from') or ''), E(ev.get('to') or ''),
                       E(ev.get('kind') or ''), E(ev.get('slug') or ''),
                       E(ev.get('task') or '')))
     if not events:
         out.append('<tr><td colspan="6">No events in this feed.</td></tr>')
+    out.append('<tr id="feed-no-match" hidden><td colspan="6">No events match the filters.</td></tr>')
     out.append('</tbody></table></div></section>')
     return '\n'.join(out)
 
@@ -1210,6 +1381,131 @@ BOARD_JS = """
       }
     });
   });
+  // v0.1.8: the Needs strip's Open button reveals the full list.
+  var needBtn = $('need-toggle');
+  var needList = $('need-list');
+  if (needBtn && needList) {
+    needBtn.addEventListener('click', function () {
+      var open = needList.hidden;
+      needList.hidden = !open;
+      needBtn.textContent = open ? 'Hide' : 'Open';
+      needBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
+  // v0.1.8: a task detail with more than 5 threads shows the newest 5;
+  // "Show all N threads" reveals the rest, and toggles back.
+  document.querySelectorAll('.show-all-threads').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var total = btn.getAttribute('data-threads') || '';
+      var extras = btn.parentElement.querySelectorAll('li.extra-thread');
+      var open = btn.getAttribute('aria-expanded') === 'true';
+      extras.forEach(function (li) { li.hidden = open; });
+      btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+      btn.textContent = open ? ('Show all ' + total + ' threads') : 'Show fewer threads';
+    });
+  });
+  // v0.1.8: the Tasks state filter. A row without data-state (Other
+  // work, or a thread whose task is not in status.json) is never
+  // hidden by it. 'Scheduled' also covers not_started rows. The choice
+  // is kept in sessionStorage so the 30-second reload does not reset it.
+  var TASK_FILTER_KEY = 'board.taskFilter';
+  var FILTER_MAP = { in_progress: ['in_progress'], pending: ['pending', 'not_started'], blocked: ['blocked'], done: ['done'] };
+  function filterTasks() {
+    var checked = [];
+    document.querySelectorAll('.flt-state').forEach(function (box) {
+      if (box.checked) checked.push(box.value);
+    });
+    var allowed = {};
+    checked.forEach(function (box) {
+      (FILTER_MAP[box] || [box]).forEach(function (s) { allowed[s] = true; });
+    });
+    var shown = 0;
+    document.querySelectorAll('#tab-tasks tr[data-state]').forEach(function (tr) {
+      var ok = !!allowed[tr.getAttribute('data-state')];
+      tr.hidden = !ok;
+      if (ok) shown++;
+    });
+    var none = $('tasks-no-match');
+    if (none) none.hidden = shown > 0 || document.querySelectorAll('#tab-tasks tr[data-task]:not([data-state])').length > 0;
+    var all = $('flt-all');
+    if (all) all.checked = document.querySelectorAll('.flt-state').length === checked.length && checked.length > 0;
+    try { sessionStorage.setItem(TASK_FILTER_KEY, checked.join(',')); } catch (e) {}
+  }
+  document.querySelectorAll('.flt-state').forEach(function (box) {
+    box.addEventListener('change', filterTasks);
+  });
+  var fltAll = $('flt-all');
+  if (fltAll) {
+    fltAll.addEventListener('change', function () {
+      var on = fltAll.checked;
+      document.querySelectorAll('.flt-state').forEach(function (box) { box.checked = on; });
+      filterTasks();
+    });
+  }
+  try {
+    var savedFilter = sessionStorage.getItem(TASK_FILTER_KEY);
+    if (savedFilter !== null) {
+      var wanted = savedFilter ? savedFilter.split(',') : [];
+      document.querySelectorAll('.flt-state').forEach(function (box) {
+        box.checked = wanted.indexOf(box.value) !== -1;
+      });
+    }
+  } catch (e) {}
+  filterTasks();
+  // v0.1.8: the Feed column filters. Time compares as strings: each
+  // row carries its time as YYYY-MM-DDTHH:MM in WIB, the same shape a
+  // datetime-local input returns. Text filters match case-insensitively
+  // on a substring. The values are kept in sessionStorage so the
+  // 30-second reload does not reset them.
+  var FEED_FILTER_KEY = 'board.feedFilter';
+  var FEED_FIELDS = ['flt-time-from', 'flt-time-to', 'flt-from', 'flt-to', 'flt-action', 'flt-task'];
+  function filterFeed() {
+    var fromT = $('flt-time-from') ? $('flt-time-from').value : '';
+    var toT = $('flt-time-to') ? $('flt-time-to').value : '';
+    var fromV = ($('flt-from') ? $('flt-from').value : '').toLowerCase();
+    var toV = ($('flt-to') ? $('flt-to').value : '').toLowerCase();
+    var actV = ($('flt-action') ? $('flt-action').value : '').toLowerCase();
+    var taskV = ($('flt-task') ? $('flt-task').value : '').toLowerCase();
+    var shown = 0;
+    document.querySelectorAll('#feed-table tbody tr[data-time]').forEach(function (tr) {
+      var t = tr.getAttribute('data-time') || '';
+      var ok = (!fromT || t >= fromT) && (!toT || t <= toT) &&
+        (!fromV || (tr.getAttribute('data-from') || '').toLowerCase().indexOf(fromV) !== -1) &&
+        (!toV || (tr.getAttribute('data-to') || '').toLowerCase().indexOf(toV) !== -1) &&
+        (!actV || (tr.getAttribute('data-action') || '').toLowerCase().indexOf(actV) !== -1) &&
+        (!taskV || (tr.getAttribute('data-task') || '').toLowerCase().indexOf(taskV) !== -1);
+      tr.hidden = !ok;
+      if (ok) shown++;
+    });
+    var none = $('feed-no-match');
+    if (none) none.hidden = shown > 0;
+    try {
+      var saved = {};
+      FEED_FIELDS.forEach(function (id) { saved[id] = $(id) ? $(id).value : ''; });
+      sessionStorage.setItem(FEED_FILTER_KEY, JSON.stringify(saved));
+    } catch (e) {}
+  }
+  FEED_FIELDS.forEach(function (id) {
+    var el = $(id);
+    if (el) el.addEventListener('input', filterFeed);
+  });
+  var fltClear = $('flt-clear');
+  if (fltClear) {
+    fltClear.addEventListener('click', function () {
+      FEED_FIELDS.forEach(function (id) { var el = $(id); if (el) el.value = ''; });
+      filterFeed();
+    });
+  }
+  try {
+    var savedFeed = JSON.parse(sessionStorage.getItem(FEED_FILTER_KEY) || 'null');
+    if (savedFeed) {
+      FEED_FIELDS.forEach(function (id) {
+        var el = $(id);
+        if (el && savedFeed[id]) el.value = savedFeed[id];
+      });
+    }
+  } catch (e) {}
+  filterFeed();
   var POLL_MS = 30000;
   var SCROLL_KEY = 'board.scrollY';
   function reloadKeepingPlace() {
@@ -1275,7 +1571,7 @@ def render_page(feed, agents, last_good_status=None, last_good_at=None, now=None
     body.append('<title>Agent Activity Board</title>')
     body.append('<style>%s</style></head>' % CSS)
     body.append('<body data-generated="%s"><div class="wrap">' % _esc_attr(feed.get('generated_at') or ''))
-    body.append(render_header(feed, status_json, status_stale, status_as_of, now))
+    body.append(render_header(feed, tasks_by_id, status_json, status_stale, status_as_of, now))
     body.append('<nav class="tabs" aria-label="Board tabs">'
                 '<a href="#map" aria-selected="true">Live map</a>'
                 '<a href="#arch" aria-selected="false">Architecture</a>'

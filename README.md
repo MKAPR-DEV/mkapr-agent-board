@@ -66,7 +66,7 @@ curl -X POST -H 'Content-Type: application/json' \
 python3 -m unittest discover -s tests -v
 ```
 
-117 tests, all passing at v0.1.7:
+124 tests, all passing at v0.1.8:
 
 - service: health, page/feed password (401 without or with a wrong
   password), ingest auth (401 without or with a wrong token), wrong
@@ -127,20 +127,36 @@ python3 -m unittest discover -s tests -v
   behaviour. The page builds no absolute URLs (only root-relative
   `/feed.json` and `#` links), so it works behind a proxy that
   publishes it at `/` on its own hostname.
-- agents refresh, Tasks rows, card label (v0.1.7, Deniel's pick):
+- agents refresh, card label (v0.1.7, Deniel's pick):
   `config/agents.json` is now a copy of AGENTS.md v1.8 — muse-feed and
   muse-page are live, the retired Status agent is gone, and the new
   validator agent (session, subagent in the architect session) takes
   the slot Status had, with the Claude badge; badge counts 4 Claude /
-  4 Muse / 1 Grok, 9 cards. The Tasks tab shows one row per task
-  (count "N threads, M open"; answered or closed threads are not rows;
-  the row shows the oldest open thread) and the detail panel lists the
-  task's threads. The map label follows the ball: the feed's
+  4 Muse / 1 Grok, 9 cards. The map label follows the ball: the feed's
   doing_task, then an open thread with ball_with == agent, then a
   status.json task with ball_with == agent (a new optional field,
   written by Ops; absent until then, and a task without it matches
   nothing there). Owning an in-progress task no longer puts it on the
   card, and a closed task (state or stage 'done') never shows.
+- five fixes from Deniel's check of v0.1.7 (v0.1.8): the Needs strip
+  counts open things only (a human-inbox entry, an open decision/halt
+  thread, a task with ball_with == deniel, the attention lines in
+  full), each item on its own line with a plain label (Decision,
+  Waiting on you, Attention), the task id as a link to the Tasks tab,
+  and the Open button reveals the whole list (nothing cut to two, no
+  "decision: decision:" doubling). The Tasks tab shows one row per
+  delivery task (not per open thread), with a state filter — All, In
+  progress, Scheduled (pending, which also covers not_started),
+  Blocked, Done; by default In progress, Scheduled and Blocked are
+  shown and Done is hidden. A task with no thread still gets its row
+  ("no threads" in its detail panel); a thread or a doing_task whose
+  task is not in status.json gets a row too, so every map label has a
+  row and a detail panel. The State column shows the task's own state.
+  A detail panel shows the newest 5 threads first, the rest behind a
+  "Show all N threads" control. The Feed tab has one filter per column
+  (time range, from, to, action, task), client-side. Filter choices
+  survive the 30-second reload (sessionStorage). The dead POLL_MIN
+  'status' entry is gone with the retired status agent.
 - parity (PRD criterion 17): against the real `status.json`, the
   Architecture figures match the Status page's build output exactly
   (same geometry, same status word and colour for all 29 bound ids,
@@ -229,10 +245,12 @@ brute-forced. Deniel sets it at install time.
   all parts count, two decimals), "Work data as of HH:MM:SS WIB",
   "Status data updated HH:MM by \<who\>" and "Architecture v\<version\>"
   from `status.json`, a Refresh button, a red banner when the feed is
-  older than 5 minutes, and a red "N items need Deniel" strip (first two
-  items + Open button) when anything needs him — human-inbox decisions,
-  halts, and the status.json attention list; slug and action only, never
-  a message body.
+  older than 5 minutes, and a red "N items need Deniel" strip (count
+  + Open button revealing the full list, each item on its own line
+  with a plain label, full text and a task link) when anything open
+  needs him — human-inbox entries, open decision/halt threads, tasks
+  with ball_with == deniel, and the status.json attention list; slug
+  and action only, never a message body.
 - Live map: one card per agent around the Agent bus bar; icon per kind
   (inline SVG), state dot + word, waiting chip, and a pill label with
   what the agent is doing (task id + short title from `status.json`,
@@ -252,12 +270,18 @@ brute-forced. Deniel sets it at install time.
   task rows, NEW and CHANGED tags); task ids link to the Tasks tab.
 - Agents: one row per agent (runs where, doing now, waiting for it,
   last seen, schedule, state).
-- Tasks: one row per task (task id + short title with its thread count,
-  who has the ball, where, since, state, next) and a detail panel per
-  task (stage as a row of stage boxes with the current one filled,
-  summary, waiting on, the task's threads, timeline of every message
-  in its threads in time order, latest Reports files).
+- Tasks: one row per delivery task (task id + short title with its
+  thread count, who has the ball, where, since, the task's own state,
+  next), a state filter (All / In progress / Scheduled / Blocked /
+  Done; done hidden by default), and a detail panel per task (stage as
+  a row of stage boxes with the current one filled, summary, waiting
+  on, the newest 5 of the task's threads with a "Show all N threads"
+  control, timeline of every message in its threads in time order,
+  latest Reports files). A task with no thread says "no threads".
   A missing field says "not recorded" — nothing is invented.
+- Feed: the newest 50 events with one filter per column (time range,
+  from, to, action, task), client-side; a "No events match the
+  filters." row when nothing matches.
 - Feed: the newest 50 events (time, from → to, action/type, slug, task).
   No message text anywhere on the page, in the feed, or in the logs.
 

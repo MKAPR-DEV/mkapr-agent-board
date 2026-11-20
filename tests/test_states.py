@@ -71,10 +71,9 @@ class StateRuleTests(unittest.TestCase):
         t = thread(ball_with='grok', since='2026-11-19T09:45:00+07:00')
         state, _ = thread_state(t, 'scheduled', NOW)
         self.assertEqual(state, 'WAITING')
-        # Status polls hourly: stale after 2 hours.
-        t = thread(ball_with='status', since='2026-11-19T07:30:00+07:00')
-        state, _ = thread_state(t, 'scheduled', NOW)
-        self.assertEqual(state, 'STALE')
+        # v0.1.8: the status agent is retired, so its hourly poll (and
+        # the POLL_MIN 'status' entry) is gone with it; an unknown
+        # scheduled agent falls back to the 10-minute poll.
 
     def test_started_marker_turns_waiting_into_in_progress(self):
         t = thread(ball_with='muse-page', since='2026-11-19T09:10:00+07:00')
@@ -148,6 +147,17 @@ class RenderedStateTests(unittest.TestCase):
         self.assertIn('tsk-015-halt', page)
         self.assertIn('<div class="banner red" id="feed-banner" role="alert" hidden>',
                       page)
+        # v0.1.8: plain labels, no doubling, the full list behind the
+        # Open button, the task id as a link to the Tasks tab.
+        self.assertIn('<strong>Decision</strong>', page)
+        self.assertIn('<strong>Attention</strong>', page)
+        self.assertNotIn('decision: decision:', page)
+        self.assertNotIn('Decision: decision:', page)
+        self.assertIn('id="need-toggle"', page)
+        self.assertIn('<ul id="need-list" hidden>', page)
+        strip = page.split('class="need-strip"')[1].split('</header>')[0]
+        self.assertIn('<a href="#task=TSK-012">TSK-012</a>', strip)
+        self.assertIn('Name an owner for WhatsApp Alert, Website Health Check and the KB connector.', strip)
 
     def test_stale_feed_shows_the_red_banner(self):
         srv = H.Server(seed=load_fixture('feed-stale.json'))

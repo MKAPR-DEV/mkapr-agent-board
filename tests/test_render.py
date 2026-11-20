@@ -158,21 +158,113 @@ class RenderTests(unittest.TestCase):
 
     def test_task_rows_are_keyboard_selectable(self):
         page = self._page()
-        self.assertIn('tr data-task="TSK-015" tabindex="0"', page)
+        self.assertIn('data-task="TSK-015" data-state="in_progress" tabindex="0"', page)
         self.assertIn('data-task-detail="TSK-015"', page)
         # Stage boxes: the current stage is filled.
         self.assertIn('<span class="on">Test</span>', page)
         self.assertIn('<span class="on">Import prep</span>', page)
-        # v0.1.7: one row per task, not per thread. TSK-012's only thread
-        # is ANSWERED, so it has no row; each row carries its count.
+        # v0.1.8: one row per delivery task, not per open thread. Every
+        # delivery task has a row (14 in this fixture) plus Other work
+        # for the untasked thread, plus TSK-016: Archie's doing_task,
+        # with neither a thread nor a status record. TSK-012's only
+        # thread is ANSWERED, so it still gets its row, with 0 open.
         tasks_section = page.split('id="tab-tasks"')[1].split('id="tab-feed"')[0]
         self.assertIn('One row per task.', tasks_section)
-        self.assertEqual(tasks_section.count('<tr data-task='), 2)
-        self.assertNotIn('tr data-task="TSK-012"', tasks_section)
+        self.assertEqual(tasks_section.count('<tr data-task='), 16)
+        self.assertIn('tr data-task="TSK-012"', tasks_section)
+        self.assertIn('TSK-012 KB pipeline main', tasks_section)
+        self.assertIn('(1 thread, 0 open)', tasks_section)
         self.assertIn('(1 thread, 1 open)', tasks_section)
+        self.assertIn('tr data-task="TSK-016"', tasks_section)
+        self.assertIn('TSK-016 (no threads)', tasks_section)
         # The detail panel lists the task's threads, answered ones too.
         self.assertIn('<h3>Threads</h3>', tasks_section)
         self.assertIn('tsk-012-deploy-script', tasks_section)
+        # A delivery task with no thread still gets its row, and its
+        # detail panel says so.
+        self.assertIn('(no threads)', tasks_section)
+        self.assertIn('<p class="note">no threads</p>', tasks_section)
+        # The state filter: In progress, Scheduled and Blocked checked,
+        # Done unchecked, and every row carries its task state.
+        self.assertIn('id="flt-all"', tasks_section)
+        self.assertIn('class="flt-state" value="in_progress" checked', tasks_section)
+        self.assertIn('class="flt-state" value="pending" checked', tasks_section)
+        self.assertIn('class="flt-state" value="blocked" checked', tasks_section)
+        self.assertIn('class="flt-state" value="done"', tasks_section)
+        self.assertNotIn('class="flt-state" value="done" checked', tasks_section)
+        self.assertIn('data-state="in_progress"', tasks_section)
+        self.assertIn('data-state="done"', tasks_section)
+        self.assertIn('id="tasks-no-match" hidden', tasks_section)
+        # The State column shows the task's own state, not the thread's.
+        self.assertIn('<td>In progress</td>', tasks_section)
+
+    def test_task_detail_threads_capped_at_five(self):
+        # Seven threads for one task: the detail shows the newest five
+        # first, hides the other two behind a "Show all 7 threads"
+        # control.
+        threads = []
+        for i in range(7):
+            threads.append({'thread_id': 't%d' % i, 'task': 'TSK-016',
+                            'slug': 'slug-%d' % i, 'state': 'WAITING',
+                            'since': '2026-11-19T09:%02d:00+07:00' % (10 + i),
+                            'messages': [{'time': '2026-11-19T09:%02d:00+07:00' % (10 + i),
+                                          'from': 'archie', 'to': 'muse-page',
+                                          'action': 'request', 'slug': 'slug-%d' % i,
+                                          'msg_id': 'm%d' % i}]})
+        feed = load_fixture('feed-basic.json')
+        feed['threads'] = threads
+        page = self._page(seed=feed)
+        tasks_section = page.split('id="tab-tasks"')[1].split('id="tab-feed"')[0]
+        # TSK-016 is a thread-only task here, so its panel is followed
+        # by the Other work panel (the only one with an empty id).
+        detail = tasks_section.split('data-task-detail="TSK-016"')[1] \
+            .split('data-task-detail=""')[0]
+        threads_block = detail.split('<h3>Threads</h3>')[1].split('<h3>Timeline</h3>')[0]
+        self.assertEqual(threads_block.count('<li class="extra-thread" hidden>'), 2)
+        self.assertIn('Show all 7 threads', threads_block)
+        # Newest first: slug-6 (09:16) before slug-0 (09:10), and the
+        # hidden two are the oldest.
+        self.assertLess(threads_block.index('slug-6'), threads_block.index('slug-5'))
+        self.assertLess(threads_block.index('slug-5'), threads_block.index('slug-2'))
+        self.assertIn('slug-0', threads_block)
+        self.assertIn('slug-1', threads_block)
+
+    def test_feed_filters_are_present(self):
+        page = self._page()
+        feed_section = page.split('id="tab-feed"')[1]
+        for fid in ('flt-time-from', 'flt-time-to', 'flt-from', 'flt-to',
+                    'flt-action', 'flt-task', 'flt-clear'):
+            self.assertIn('id="%s"' % fid, feed_section)
+        self.assertIn('type="datetime-local"', feed_section)
+        # Every row carries the data the filters read, and the no-match
+        # row is there for when nothing matches.
+        self.assertIn('data-time="', feed_section)
+        self.assertIn('data-from="', feed_section)
+        self.assertIn('data-to="', feed_section)
+        self.assertIn('data-action="', feed_section)
+        self.assertIn('data-task="', feed_section)
+        self.assertIn('id="feed-no-match" hidden', feed_section)
+        self.assertIn('No events match the filters.', feed_section)
+        self.assertIn('function filterFeed()', page)
+        self.assertIn('function filterTasks()', page)
+
+    def test_map_labels_agree_with_task_rows(self):
+        # v0.1.8 item 5 (Deniel's TSK-012 click): every task link on the
+        # page — map labels, delivery links, the Needs strip — must have
+        # both a Tasks row and a detail panel, so the clicked row and the
+        # detail can never disagree.
+        page = self._page()
+        tasks_section = page.split('id="tab-tasks"')[1].split('id="tab-feed"')[0]
+        ids = sorted(set(re.findall(r'href="#task=([A-Za-z0-9-]+)"', page)))
+        self.assertTrue(ids)
+        for tid in ids:
+            self.assertIn('<tr data-task="%s"' % tid, tasks_section,
+                          'map label %s has no Tasks row' % tid)
+            self.assertIn('data-task-detail="%s"' % tid, tasks_section,
+                          'map label %s has no detail panel' % tid)
+        # Clicking selects the row (the 'sel' class) and scrolls to it.
+        self.assertIn("tr.classList.toggle('sel'", page)
+        self.assertIn("tr.scrollIntoView({ block: 'nearest' })", page)
         self.assertIn('Answered', tasks_section)
 
     def test_feed_tab_lists_newest_events_no_message_text(self):
@@ -317,14 +409,14 @@ class RenderTests(unittest.TestCase):
                  'topic': 'bulk-%02d' % i})
         page = self._page(seed=feed)
         feed_section = page.split('id="tab-feed"')[1]
-        rows = re.findall(r'<tr><td>', feed_section)
+        rows = re.findall(r'<tr[^>]*><td>', feed_section)
         self.assertEqual(len(rows), 50)
 
     def test_empty_feed_renders_without_breaking(self):
         page = self._page(seed=load_fixture('feed-empty.json'))
         self.assertIn('Agent Activity Board', page)
         self.assertIn('No status data in this feed', page)
-        self.assertIn('No open tasks in this feed.', page)
+        self.assertIn('No tasks in this feed.', page)
         self.assertIn('No events in this feed.', page)
 
 
@@ -393,6 +485,52 @@ class DoingLabelTests(unittest.TestCase):
         feed2 = self._feed(threads=[dict(thread, state='WAITING')])
         self.assertEqual(R.doing_label('muse-kb', feed2, tasks),
                          'TSK-012 Test task')
+
+
+class NeedDenielTests(unittest.TestCase):
+    """need_deniel_items: only open things count, plain labels, full text."""
+
+    def _thread(self, task, state, actions, slug='some-slug'):
+        return {'task': task, 'state': state, 'slug': slug,
+                'messages': [{'action': a, 'slug': slug, 'msg_id': 'm-%s' % a}
+                             for a in actions]}
+
+    def _task(self, tid, ball_with=None, state='in_progress',
+              title='Test task'):
+        t = {'id': tid, 'title': title, 'state': state}
+        if ball_with is not None:
+            t['ball_with'] = ball_with
+        return t
+
+    def test_closed_and_answered_decision_threads_are_excluded(self):
+        feed = {'human_inbox': [],
+                'threads': [self._thread('TSK-001', 'CLOSED', ['decision'], 'closed-one'),
+                            self._thread('TSK-002', 'ANSWERED', ['halt'], 'answered-one'),
+                            self._thread('TSK-003', 'WAITING', ['decision'], 'open-one')]}
+        items = R.need_deniel_items(feed, {}, {})
+        self.assertEqual(items, [('Decision', 'open-one', 'TSK-003')])
+
+    def test_human_inbox_labels_by_action(self):
+        feed = {'human_inbox': [{'action': 'decision', 'slug': 'decide-this', 'task': 'TSK-001'},
+                                {'action': 'message', 'slug': 'read-this', 'task': ''}],
+                'threads': []}
+        items = R.need_deniel_items(feed, {}, {})
+        self.assertEqual(items, [('Decision', 'decide-this', 'TSK-001'),
+                                 ('Waiting on you', 'read-this', '')])
+
+    def test_ball_with_deniel_task_counts_when_open(self):
+        tasks = {'TSK-001': self._task('TSK-001', ball_with='deniel'),
+                 'TSK-002': self._task('TSK-002', ball_with='deniel', state='done'),
+                 'TSK-003': self._task('TSK-003', ball_with='muse-ping')}
+        items = R.need_deniel_items({'human_inbox': [], 'threads': []}, tasks, {})
+        self.assertEqual(items, [('Waiting on you', 'Test task', 'TSK-001')])
+
+    def test_attention_lines_are_full_text(self):
+        long_line = 'A very long attention line ' * 10
+        items = R.need_deniel_items({'human_inbox': [], 'threads': []}, {},
+                                    {'attention': [long_line]})
+        self.assertEqual(items, [('Attention', long_line, '')])
+        self.assertNotIn('…', items[0][1])
 
 
 if __name__ == '__main__':

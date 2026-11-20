@@ -37,7 +37,11 @@ WORK_END = time(18, 50)
 SESSION_STALE_MIN = 25
 MANUAL_PING_MIN = 10
 SCHEDULED_MISSED_POLLS = 2
-POLL_MIN = {'grok': 10, 'status': 60, 'muse': 10}
+POLL_MIN = {'grok': 10, 'muse': 10}
+# v0.1.8: the 'status': 60 entry is gone with the retired status agent
+# (AGENTS.md v1.8; the board no longer renders a status card). A
+# scheduled thread whose ball is with an agent not listed here falls
+# back to 10 minutes (two missed polls = 20 minutes).
 
 THREAD_STATES = ('WAITING', 'IN_PROGRESS', 'ANSWERED', 'CLOSED', 'STALE',
                  'NEEDS_DENIEL', 'OFF_HOURS')
