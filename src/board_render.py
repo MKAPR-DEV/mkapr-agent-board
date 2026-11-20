@@ -56,7 +56,7 @@ MAP_KINDS = ('person', 'session', 'scheduled', 'manual')
 BRAND_BY_ID = {
     'archie': ('claude', 'C'),
     'operations': ('claude', 'C'),
-    'status': ('claude', 'C'),
+    'validator': ('claude', 'C'),
     'support': ('claude', 'C'),
     'grok': ('grok', 'G'),
     'muse-ping': ('muse', 'M'),
@@ -179,41 +179,49 @@ def task_lookup(status_json):
     return out
 
 
-OWNER_TO_AGENT = {'Muse-Ping': 'muse-ping', 'Muse-KB': 'muse-kb',
-                  'Muse-Feed': 'muse-feed', 'Muse-Page': 'muse-page',
-                  'Muse': 'muse-ping', 'Grok': 'grok', 'Deniel': 'deniel',
-                  'Ops': 'operations', 'Status': 'status',
-                  'Support': 'support', 'Archie': 'archie'}
-
 
 def doing_label(agent_id, feed, tasks_by_id):
     """The map label for one agent: 'TSK-012 short title', or None when
     nothing is known. The text comes from the feed's doing_task or from
-    status.json (task id + title), never from message text."""
+    status.json (task id + title), never from message text.
+
+    v0.1.7: the task is placed by whoever holds the ball, in this order:
+    the feed's doing_task, an open thread with ball_with == agent, a
+    status.json task with ball_with == agent. The old owner fallback is
+    gone: owning an in-progress task is not holding the ball. A task
+    whose record is closed (state or stage 'done') never shows, at any
+    step. ball_with is optional on the task record and absent until Ops
+    fills it; a task without it simply matches nothing here.
+    """
     agents = {a.get('id'): a for a in feed.get('agents') or []
               if isinstance(a, dict)}
     info = agents.get(agent_id) or {}
-    task_id = info.get('doing_task')
-    if not task_id:
-        for thread in feed.get('threads') or []:
-            if thread.get('ball_with') == agent_id and thread.get('task'):
-                task_id = thread.get('task')
-                break
-    if not task_id:
-        for task in tasks_by_id.values():
-            if (OWNER_TO_AGENT.get(task.get('owner') or '') == agent_id
-                    and task.get('state') == 'in_progress'
-                    and str(task.get('id') or '').startswith('TSK-')):
-                task_id = task.get('id')
-                break
-    if not task_id:
-        return None
-    task = tasks_by_id.get(task_id) or {}
-    title = (task.get('title') or '').strip()
-    if title:
-        short = title if len(title) <= 40 else title[:39].rstrip(' ,;:') + '…'
-        return '%s %s' % (task_id, short)
-    return task_id
+    candidates = []
+    doing = info.get('doing_task')
+    if doing:
+        candidates.append(doing)
+    for thread in feed.get('threads') or []:
+        if (thread.get('ball_with') == agent_id and thread.get('task')
+                and _thread_state_word(thread) not in ('CLOSED', 'ANSWERED')):
+            candidates.append(thread.get('task'))
+    for task in tasks_by_id.values():
+        if (task.get('ball_with') == agent_id
+                and str(task.get('id') or '').startswith('TSK-')):
+            candidates.append(task.get('id'))
+    seen = set()
+    for task_id in candidates:
+        if task_id in seen:
+            continue
+        seen.add(task_id)
+        task = tasks_by_id.get(task_id) or {}
+        if task.get('state') == 'done' or task.get('stage') == 'done':
+            continue
+        title = (task.get('title') or '').strip()
+        if title:
+            short = title if len(title) <= 40 else title[:39].rstrip(' ,;:') + '…'
+            return '%s %s' % (task_id, short)
+        return task_id
+    return None
 
 
 def need_deniel_items(feed, status_json):
@@ -737,7 +745,7 @@ def render_map(feed, agents, tasks_by_id, now):
         return '\n'.join(out)
 
     by_id = {a['id']: a for a in agents}
-    top = ['deniel', 'archie', 'operations', 'grok', 'status']
+    top = ['deniel', 'archie', 'operations', 'grok', 'validator']
     bottom = ['muse-ping', 'muse-kb', 'muse-feed', 'muse-page', 'support']
     out = ['<section aria-labelledby="h-map" id="tab-map" role="tabpanel">',
            '<div class="sec-head"><h2 id="h-map">Live map</h2>',
@@ -973,19 +981,24 @@ def _next_text(thread, tasks_by_id):
 
 
 def render_tasks(feed, status_json, tasks_by_id, now):
-    """Tab 5, Tasks: open threads on the left, task detail on the right."""
+    """Tab 5, Tasks: open tasks on the left, task detail on the right."""
     groups, order = _task_threads(feed)
-    open_threads = [t for t in feed.get('threads') or []
-                    if isinstance(t, dict)
-                    and _thread_state_word(t) != 'CLOSED']
+    # Open means a thread whose state is not CLOSED or ANSWERED: the same
+    # open definition the Live map uses. A task with no open thread gets
+    # no row; its threads still show in its detail panel.
+    open_tasks = []
+    for key in order:
+        threads = groups[key]
+        open_ts = [t for t in threads
+                   if _thread_state_word(t) not in ('CLOSED', 'ANSWERED')]
+        if open_ts:
+            open_tasks.append((key, threads, open_ts))
     has_progress = any(_thread_state_word(t) == 'IN_PROGRESS'
                        for t in feed.get('threads') or [])
-    default_task = ''
-    if open_threads:
-        default_task = open_threads[0].get('task') or ''
+    default_task = open_tasks[0][0] if open_tasks else ''
     out = ['<section aria-labelledby="h-tasks" id="tab-tasks" role="tabpanel" hidden>',
            '<div class="sec-head"><h2 id="h-tasks">Tasks</h2>',
-           '<p class="lede">One row per open thread. Select a row to see the task detail. '
+           '<p class="lede">One row per task. Select a row to see the task detail and its threads. '
            'A missing field says "not recorded" &mdash; the page never invents one.</p></div>']
     if not has_progress:
         out.append('<p class="note">In progress is not recorded &mdash; no started marker was seen in this feed.</p>')
@@ -993,23 +1006,30 @@ def render_tasks(feed, status_json, tasks_by_id, now):
     out.append('<div class="table-scroll"><table class="board"><thead><tr>'
                '<th>What</th><th>Who has the ball</th><th>Where</th><th>Since</th><th>State</th><th>Next</th>'
                '</tr></thead><tbody>')
-    for thread in open_threads:
-        task_id = thread.get('task') or ''
-        task = tasks_by_id.get(task_id) or {}
-        if task_id:
+    for key, threads, open_ts in open_tasks:
+        task = tasks_by_id.get(key) or {}
+        if key:
             title = task.get('title') or ''
-            what = '%s %s' % (task_id, title) if title else task_id
+            what = '%s %s' % (key, title) if title else key
         else:
             what = 'Other work'
-        since = parse_time(thread.get('since'))
+        count = '%d thread%s, %d open' % (
+            len(threads), '' if len(threads) == 1 else 's', len(open_ts))
+        what = '%s (%s)' % (what, count)
+        # The row shows the oldest open thread (the longest wait); the
+        # count covers the rest.
+        dated = [t for t in open_ts if t.get('since')]
+        oldest = (min(dated, key=lambda t: str(t.get('since')))
+                  if dated else open_ts[0])
+        since = parse_time(oldest.get('since'))
         out.append('<tr data-task="%s" tabindex="0"><td><strong>%s</strong></td><td>%s</td><td>%s</td>'
                    '<td>%s</td><td>%s</td><td>%s</td></tr>'
-                   % (_esc_attr(task_id), E(what), E(thread.get('ball_with') or ''),
-                      E(thread.get('where') or ''),
+                   % (_esc_attr(key), E(what), E(oldest.get('ball_with') or ''),
+                      E(oldest.get('where') or ''),
                       E(fmt_hm(since)) if since else '—',
-                      E(_state_label(thread, now)), E(_next_text(thread, tasks_by_id))))
-    if not open_threads:
-        out.append('<tr><td colspan="6">No open threads in this feed.</td></tr>')
+                      E(_state_label(oldest, now)), E(_next_text(oldest, tasks_by_id))))
+    if not open_tasks:
+        out.append('<tr><td colspan="6">No open tasks in this feed.</td></tr>')
     out.append('</tbody></table></div></div>')
     out.append('<div id="task-details">')
     for key in order:
@@ -1035,6 +1055,16 @@ def render_tasks(feed, status_json, tasks_by_id, now):
         out.append('<dt>What it is about</dt><dd>%s</dd>' % (E(summary) if summary else 'not recorded'))
         out.append('<dt>Waiting on</dt><dd>%s</dd>' % (E(waiting_on) if waiting_on else 'not recorded'))
         out.append('</dl>')
+        out.append('<h3>Threads</h3><ul class="timeline">')
+        for thread in threads:
+            ts = parse_time(thread.get('since'))
+            out.append('<li><span class="tm">%s</span><span>%s</span><span>%s</span><span>%s</span><span>%s</span></li>'
+                       % (E(fmt_hm(ts)) if ts else '—',
+                          E(thread.get('slug') or thread.get('thread_id') or ''),
+                          E(_state_label(thread, now)),
+                          E(thread.get('ball_with') or ''),
+                          E(thread.get('where') or '')))
+        out.append('</ul>')
         msgs = []
         for thread in threads:
             for msg in thread.get('messages') or []:

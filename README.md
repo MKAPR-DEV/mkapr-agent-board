@@ -66,7 +66,7 @@ curl -X POST -H 'Content-Type: application/json' \
 python3 -m unittest discover -s tests -v
 ```
 
-111 tests, all passing at v0.1.6:
+117 tests, all passing at v0.1.7:
 
 - service: health, page/feed password (401 without or with a wrong
   password), ingest auth (401 without or with a wrong token), wrong
@@ -99,7 +99,7 @@ python3 -m unittest discover -s tests -v
 - platform theme (v0.1.5, Deniel's pick): map cards carry the
   platform colour (Claude terracotta #96421f, Muse blue #2c50ad,
   Grok graphite-teal #115e59) as card tint, 4 px edge, header strip,
-  tinted icon circle and brand badge (C/M/G). Status and Support run
+  tinted icon circle and brand badge (C/M/G). Validator and Support run
   on Claude, so they get the Claude badge and colours; Deniel has no
   platform, so his card stays neutral. The platform comes from a
   fixed map in the page (the feed does not say it). Every badge
@@ -127,6 +127,20 @@ python3 -m unittest discover -s tests -v
   behaviour. The page builds no absolute URLs (only root-relative
   `/feed.json` and `#` links), so it works behind a proxy that
   publishes it at `/` on its own hostname.
+- agents refresh, Tasks rows, card label (v0.1.7, Deniel's pick):
+  `config/agents.json` is now a copy of AGENTS.md v1.8 — muse-feed and
+  muse-page are live, the retired Status agent is gone, and the new
+  validator agent (session, subagent in the architect session) takes
+  the slot Status had, with the Claude badge; badge counts 4 Claude /
+  4 Muse / 1 Grok, 9 cards. The Tasks tab shows one row per task
+  (count "N threads, M open"; answered or closed threads are not rows;
+  the row shows the oldest open thread) and the detail panel lists the
+  task's threads. The map label follows the ball: the feed's
+  doing_task, then an open thread with ball_with == agent, then a
+  status.json task with ball_with == agent (a new optional field,
+  written by Ops; absent until then, and a task without it matches
+  nothing there). Owning an in-progress task no longer puts it on the
+  card, and a closed task (state or stage 'done') never shows.
 - parity (PRD criterion 17): against the real `status.json`, the
   Architecture figures match the Status page's build output exactly
   (same geometry, same status word and colour for all 29 bound ids,
@@ -222,9 +236,13 @@ brute-forced. Deniel sets it at install time.
 - Live map: one card per agent around the Agent bus bar; icon per kind
   (inline SVG), state dot + word, waiting chip, and a pill label with
   what the agent is doing (task id + short title from `status.json`,
-  never message text; click/Enter opens the Tasks tab). Agents not yet
-  created (muse-feed, muse-page until live) are dashed "not created"
-  cards. Delegation arrow Archie → Operations, labelled.
+  never message text; click/Enter opens the Tasks tab). The label
+  follows whoever holds the ball (the feed's doing_task, an open
+  thread with the ball, or a status.json task with `ball_with`); an
+  agent with no open thread and no ball shows "nothing known", and a
+  closed task never shows. Agents not yet created are dashed
+  "not created" cards (none in the current config). Delegation arrow
+  Archie → Operations, labelled.
 - Architecture: the Status page's two diagrams with the same data and
   rules (29 bound ids, `design` shown as "Planned", arrow solid only
   when every part in its `data-needs` is Live or Partial), the tally by
@@ -234,10 +252,11 @@ brute-forced. Deniel sets it at install time.
   task rows, NEW and CHANGED tags); task ids link to the Tasks tab.
 - Agents: one row per agent (runs where, doing now, waiting for it,
   last seen, schedule, state).
-- Tasks: rows (task id + short title, who has the ball, where, since,
-  state, next) and a detail panel per task (stage as a row of stage
-  boxes with the current one filled, summary, waiting on, timeline of
-  every message in its threads in time order, latest Reports files).
+- Tasks: one row per task (task id + short title with its thread count,
+  who has the ball, where, since, state, next) and a detail panel per
+  task (stage as a row of stage boxes with the current one filled,
+  summary, waiting on, the task's threads, timeline of every message
+  in its threads in time order, latest Reports files).
   A missing field says "not recorded" — nothing is invented.
 - Feed: the newest 50 events (time, from → to, action/type, slug, task).
   No message text anywhere on the page, in the feed, or in the logs.
@@ -267,10 +286,10 @@ their own box).
   by Muse-Page. Where PRD and wireframe differ, the PRD rules.
 - The n8n-to-AI02 connect test (Muse-Feed posting a real feed to this
   service) still needs Deniel's typed OK.
-- Status page retirement date: the board replaces the Status page after
-  a week in which both match (PRD D8).
-- The `muse-feed` and `muse-page` agents are shown as "not created"
-  until they are live. Muse-Coord (the `inbox/muse/` dispatch point)
+- Status page retirement: retired by Deniel 2026-11-20 (AGENTS.md v1.8);
+  the Status agent's card is removed and the validator agent takes its
+  slot.
+- Muse-Coord (the `inbox/muse/` dispatch point)
   has no map card in PRD v0.5 — open question for Archie.
 - History retention for past feeds is undecided (PRD §17).
 - Whether TASKS.md should be read in a later phase is undecided

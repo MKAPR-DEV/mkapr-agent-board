@@ -360,10 +360,10 @@ class LanListenerTests(unittest.TestCase):
     def tearDown(self):
         self.srv.stop()
 
-    def test_version_string_is_0_1_6(self):
-        self.assertEqual(svc.VERSION, '0.1.6')
+    def test_version_string_is_0_1_7(self):
+        self.assertEqual(svc.VERSION, '0.1.7')
         _, headers, _ = self.srv.request('GET', '/health')
-        self.assertEqual(headers.get('Server', '').strip(), 'AgentBoard/0.1.6')
+        self.assertEqual(headers.get('Server', '').strip(), 'AgentBoard/0.1.7')
 
     def test_lan_serves_page_feed_and_health(self):
         for path in ('/', '/feed.json'):

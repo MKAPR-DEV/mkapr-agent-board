@@ -13,6 +13,8 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import helpers as H
 from helpers import load_fixture
+sys.path.insert(0, os.path.join(H.ROOT, 'src'))
+import board_render as R
 
 
 def _lum(hexs):
@@ -107,9 +109,42 @@ class RenderTests(unittest.TestCase):
         self.assertNotIn('check-a-report', map_section)
 
     def test_not_created_agents_are_dashed_not_errors(self):
-        page = self._page()
+        # v0.1.7: the real config has no not-created agents any more
+        # (feed and page are live, status is retired), so the live page
+        # shows none. The dashed display is tested with a synthetic
+        # agent: flip 'support' (in the map's bottom row) to
+        # created:false and render directly.
+        agents = H.load_agents()
+        for a in agents:
+            if a['id'] == 'support':
+                a['created'] = False
+        page = R.render_page(load_fixture('feed-basic.json'), agents)
         self.assertIn('not created', page)
         self.assertIn('map-card not-created', page)
+        # And the live page (real config) has no dashed not-created card.
+        # (The map key still explains the dashed dot; that is the legend,
+        # not a card.)
+        live = self._page()
+        self.assertNotIn('map-card not-created', live)
+
+    def test_agents_config_matches_agents_v18(self):
+        # v0.1.7: config is a copy of AGENTS.md v1.8 — feed and page
+        # live, status retired, validator added.
+        with open(os.path.join(H.ROOT, 'config', 'agents.json'),
+                  encoding='utf-8') as f:
+            cfg = json.load(f)
+        self.assertIn('AGENTS.md v1.8 (Archie, 2026-11-20)', cfg['source'])
+        ids = [a['id'] for a in cfg['agents']]
+        self.assertEqual(len(ids), 10)
+        self.assertNotIn('status', ids)
+        self.assertIn('validator', ids)
+        self.assertTrue(all(a['created'] for a in cfg['agents']))
+        val = next(a for a in cfg['agents'] if a['id'] == 'validator')
+        self.assertEqual(val['kind'], 'session')
+        self.assertEqual(val['inbox'], 'inbox/validator/')
+        self.assertEqual(val['runs_where'],
+                         'Subagent in the architect session')
+        self.assertEqual(val['stale_minutes'], 25)
 
     def test_delegation_arrow_is_labelled(self):
         page = self._page()
@@ -128,6 +163,17 @@ class RenderTests(unittest.TestCase):
         # Stage boxes: the current stage is filled.
         self.assertIn('<span class="on">Test</span>', page)
         self.assertIn('<span class="on">Import prep</span>', page)
+        # v0.1.7: one row per task, not per thread. TSK-012's only thread
+        # is ANSWERED, so it has no row; each row carries its count.
+        tasks_section = page.split('id="tab-tasks"')[1].split('id="tab-feed"')[0]
+        self.assertIn('One row per task.', tasks_section)
+        self.assertEqual(tasks_section.count('<tr data-task='), 2)
+        self.assertNotIn('tr data-task="TSK-012"', tasks_section)
+        self.assertIn('(1 thread, 1 open)', tasks_section)
+        # The detail panel lists the task's threads, answered ones too.
+        self.assertIn('<h3>Threads</h3>', tasks_section)
+        self.assertIn('tsk-012-deploy-script', tasks_section)
+        self.assertIn('Answered', tasks_section)
 
     def test_feed_tab_lists_newest_events_no_message_text(self):
         page = self._page()
@@ -168,12 +214,16 @@ class RenderTests(unittest.TestCase):
         self.assertIn('.map-card.p-claude { background: rgba(150,66,31,0.12); border-left: 4px solid var(--claude); }', page)
         self.assertIn('.map-card.p-grok .who { background: rgba(17,94,89,0.18); margin: -10px -12px 0; padding: 10px 12px; border-radius: 8px 8px 0 0; }', page)
         self.assertIn('.map-card.p-muse .kicon { background: rgba(44,80,173,0.20); color: var(--muse); }', page)
-        # Brand badges top-right: 4 Claude (archie, operations, status,
-        # support), 4 Muse, 1 Grok; deniel has none.
+        # Brand badges top-right: 4 Claude (archie, operations,
+        # validator, support), 4 Muse, 1 Grok; deniel has none.
         self.assertEqual(page.count('class="brand brand-claude"'), 4)
         self.assertEqual(page.count('class="brand brand-muse"'), 4)
         self.assertEqual(page.count('class="brand brand-grok"'), 1)
         self.assertEqual(page.count('class="brand '), 9)
+        # v0.1.7: the validator card sits in the slot status had; the
+        # status card is gone.
+        self.assertIn('<span class="nm">validator</span>', page)
+        self.assertNotIn('<span class="nm">status</span>', page)
         self.assertIn('class="map-card p-claude"', page)
         self.assertIn('class="map-card p-grok"', page)
         # Tablet: auto-fill ~320px columns, so cards never take the whole
@@ -274,8 +324,75 @@ class RenderTests(unittest.TestCase):
         page = self._page(seed=load_fixture('feed-empty.json'))
         self.assertIn('Agent Activity Board', page)
         self.assertIn('No status data in this feed', page)
-        self.assertIn('No open threads in this feed.', page)
+        self.assertIn('No open tasks in this feed.', page)
         self.assertIn('No events in this feed.', page)
+
+
+class DoingLabelTests(unittest.TestCase):
+    """doing_label: the card label follows the ball, not the owner."""
+
+    def _feed(self, agents=None, threads=None):
+        return {'agents': agents or [], 'threads': threads or []}
+
+    def _task(self, tid, **kw):
+        task = {'id': tid, 'title': 'Test task', 'owner': 'Muse-Ping',
+                'state': 'in_progress', 'stage': 'test'}
+        task.update(kw)
+        return task
+
+    def test_owner_fallback_is_gone(self):
+        # v0.1.7: owning an in-progress task, with no thread, no
+        # doing_task and no ball_with, shows nothing.
+        feed = self._feed()
+        tasks = {'TSK-015': self._task('TSK-015')}
+        self.assertIsNone(R.doing_label('muse-ping', feed, tasks))
+
+    def test_ball_with_places_the_label_on_the_ball_holder(self):
+        # v0.1.7: ball_with names the card, not the owner.
+        feed = self._feed()
+        tasks = {'TSK-015': self._task('TSK-015', ball_with='deniel')}
+        self.assertIsNone(R.doing_label('muse-ping', feed, tasks))
+        self.assertEqual(R.doing_label('deniel', feed, tasks),
+                         'TSK-015 Test task')
+
+    def test_ball_with_absent_matches_nothing(self):
+        # v0.1.7 / Archie's timing rule: until Ops fills ball_with, a
+        # task without it must give the same result as a feed with no
+        # ball_with field at all — no label from the new step, for any
+        # agent.
+        feed = self._feed()
+        tasks = {'TSK-015': self._task('TSK-015')}
+        self.assertIsNone(R.doing_label('deniel', feed, tasks))
+        self.assertIsNone(R.doing_label('archie', feed, tasks))
+        self.assertIsNone(R.doing_label('muse-ping', feed, tasks))
+
+    def test_closed_task_never_shows(self):
+        # v0.1.7: state done or stage done suppresses the label at every
+        # step, including doing_task.
+        feed = self._feed(
+            agents=[{'id': 'muse-ping', 'doing_task': 'TSK-001'}])
+        done_state = {'TSK-001': self._task('TSK-001', state='done')}
+        self.assertIsNone(R.doing_label('muse-ping', feed, done_state))
+        done_stage = {'TSK-001': self._task('TSK-001', stage='done')}
+        self.assertIsNone(R.doing_label('muse-ping', feed, done_stage))
+        # A live task still shows via doing_task.
+        live = {'TSK-015': self._task('TSK-015')}
+        feed2 = self._feed(
+            agents=[{'id': 'muse-ping', 'doing_task': 'TSK-015'}])
+        self.assertEqual(R.doing_label('muse-ping', feed2, live),
+                         'TSK-015 Test task')
+
+    def test_answered_thread_does_not_place_the_label(self):
+        # v0.1.7: the thread step takes open threads only.
+        thread = {'ball_with': 'muse-kb', 'task': 'TSK-012',
+                  'state': 'ANSWERED',
+                  'since': '2026-11-19T09:10:00+07:00'}
+        feed = self._feed(threads=[thread])
+        tasks = {'TSK-012': self._task('TSK-012', owner='Muse-KB')}
+        self.assertIsNone(R.doing_label('muse-kb', feed, tasks))
+        feed2 = self._feed(threads=[dict(thread, state='WAITING')])
+        self.assertEqual(R.doing_label('muse-kb', feed2, tasks),
+                         'TSK-012 Test task')
 
 
 if __name__ == '__main__':

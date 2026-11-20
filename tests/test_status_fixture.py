@@ -63,7 +63,15 @@ class StatusFixtureTests(unittest.TestCase):
         self.assertEqual(r.errors, [], ' | '.join('%s: %s' % e for e in r.errors))
 
     def test_real_status_json_has_only_the_known_warning(self):
-        r = V.validate(self.data, self.raw, self.index)
+        # The fixture is a copy of the real status.json from 19 Nov 12:07
+        # WIB; validate it against a clock near that time, so the
+        # 24-hour staleness warning (a property of the copy's age, not
+        # of its content) does not fire. Without the fixed clock this
+        # test starts failing once the copy is a day old.
+        from datetime import datetime, timedelta
+        upd = datetime.fromisoformat(self.data['updated'])
+        r = V.validate(self.data, self.raw, self.index,
+                       now=upd + timedelta(hours=1))
         self.assertEqual(len(r.warnings), 1)
         where, msg = r.warnings[0]
         self.assertEqual(where, 'elements.gateway_cleanup.status')
